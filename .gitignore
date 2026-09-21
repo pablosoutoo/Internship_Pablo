@@ -2,4 +2,5 @@
 .Rhistory
 .RData
 .Ruserdata
-Inputs/External/
+Inputs/External/*
+!Inputs/External/.gitkeep
