@@ -32,7 +32,7 @@ ggsave(filename="Module1 (Exploratory Analysis)/results/s1_feat_scatt_2.png", pl
 
 # NOTE (2026-09-23): subset() is unreliable on this object. It trims meta.data
 # correctly (37,407 QC-passing cells) but leaves the RNA assay's counts matrix at
-# the original 45,747 cells, so NormalizeData() fails with a dimension mismatch.
+# the original 45,747 cells, so NormalizeData() fails because there is a dimension mismatch.
 # Ruled out: the ADT assay's un-joined per-sample layers (dropping ADT did not fix it),
 # a stale object (re-running subset() fresh did not fix it), and duplicated or
 # mismatched barcodes (zero duplicates, perfect 1:1 match between meta.data and RNA).
@@ -94,3 +94,18 @@ data_normalized<- NormalizeData(data_filtered)
 
 dim(data_normalized)
 dim(data_filtered)
+
+#Identification of highly variable features
+
+data_normalized<-FindVariableFeatures(data_normalized, selection.method= "vst", nfeatures = 2000)
+
+##Identify the 10 most highly variable genes
+top10 <- head(VariableFeatures(data_normalized),10)
+top10
+
+##Plot variable features with and without labels
+plot1a <- VariableFeaturePlot(data_normalized)
+plot2a <- LabelPoints(plot = plot1, points = top10, repel = TRUE)
+
+final_plot <- plot1a + plot2a
+ggsave(filename="Module1 (Exploratory Analysis)/results/s1_variable_features.png", plot=plot1,width = 8, height = 6, dpi = 300)
