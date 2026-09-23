@@ -111,3 +111,10 @@ plot2a
 final_plot <- plot1a + plot2a
 final_plot
 ggsave(filename="Module1 (Exploratory Analysis)/results/s1_variable_features.png", plot=plot2a,width = 8, height = 6, dpi = 300)
+
+#Scale the data
+all.genes <- rownames(data_normalized)
+data_scaled <- ScaleData(data_normalized, features=all.genes)
+
+#PCA
+data_red <- RUNPCA(data_scaled, features = VariableFeatures(object = data_scaled))
