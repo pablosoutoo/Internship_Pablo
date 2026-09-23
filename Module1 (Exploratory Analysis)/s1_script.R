@@ -56,4 +56,5 @@ dim(data_filtered[["RNA"]])
 
 data_normalized<- NormalizeData(data_filtered)
 
-
+dim(data_normalized)
+dim(data_filtered)
