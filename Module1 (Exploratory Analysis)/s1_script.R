@@ -105,7 +105,9 @@ top10
 
 ##Plot variable features with and without labels
 plot1a <- VariableFeaturePlot(data_normalized)
-plot2a <- LabelPoints(plot = plot1, points = top10, repel = TRUE)
-
+plot1a
+plot2a <- LabelPoints(plot = plot1a, points = top10, repel = TRUE)
+plot2a
 final_plot <- plot1a + plot2a
-ggsave(filename="Module1 (Exploratory Analysis)/results/s1_variable_features.png", plot=plot1,width = 8, height = 6, dpi = 300)
+final_plot
+ggsave(filename="Module1 (Exploratory Analysis)/results/s1_variable_features.png", plot=plot2a,width = 8, height = 6, dpi = 300)
