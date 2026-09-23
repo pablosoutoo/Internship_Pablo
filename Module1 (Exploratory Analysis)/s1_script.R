@@ -117,4 +117,9 @@ all.genes <- rownames(data_normalized)
 data_scaled <- ScaleData(data_normalized, features=all.genes)
 
 #PCA
-data_red <- RUNPCA(data_scaled, features = VariableFeatures(object = data_scaled))
+data_red <- RunPCA(data_scaled, features = VariableFeatures(object = data_scaled))
+pca1<-VizDimLoadings(data_red,dim =1:2, reduction ="pca")
+ggsave(filename="Module1 (Exploratory Analysis)/results/PCA/most_imp_genes.png", plot=pca1,width = 8, height = 6, dpi = 300)
+
+pca2<-DimPlot(data_red, reduction = "pca") + NoLegend()
+ggsave(filename="Module1 (Exploratory Analysis)/results/PCA/PCA.png", plot=pca2,width = 8, height = 6, dpi = 300)
