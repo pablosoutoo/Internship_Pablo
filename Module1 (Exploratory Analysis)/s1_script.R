@@ -121,5 +121,20 @@ data_red <- RunPCA(data_scaled, features = VariableFeatures(object = data_scaled
 pca1<-VizDimLoadings(data_red,dim =1:2, reduction ="pca")
 ggsave(filename="Module1 (Exploratory Analysis)/results/PCA/most_imp_genes.png", plot=pca1,width = 8, height = 6, dpi = 300)
 
-pca2<-DimPlot(data_red, reduction = "pca") + NoLegend()
+pca2<-DimPlot(data_red, reduction = "pca")
 ggsave(filename="Module1 (Exploratory Analysis)/results/PCA/PCA.png", plot=pca2,width = 8, height = 6, dpi = 300)
+
+DimHeatmap(data_red, dims = 1, cells = 500, balanced = TRUE)
+
+elbow_plot<-ElbowPlot(data_red)
+ggsave(filename="Module1 (Exploratory Analysis)/results/PCA/Elbow_plot.png", plot=elbow_plot,width = 8, height = 6, dpi = 300)
+
+#Clusterization
+neigbours <- FindNeighbors(data_red, dims = 1:16)
+data_clus <- FindClusters(neigbours, resolution = 0.5)
+
+#UMAP/t-SNE
+umap<-RunUMAP(data_clus, dims= 1:16)
+umap_plot<-DimPlot(umap, reduction = "umap")
+ggsave(filename="Module1 (Exploratory Analysis)/results/UMAP/UMAP.png", plot=umap_plot,width = 8, height = 6, dpi = 300)
+
