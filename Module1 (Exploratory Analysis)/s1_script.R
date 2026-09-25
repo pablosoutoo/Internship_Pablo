@@ -78,6 +78,8 @@ data <- CreateSeuratObject(counts = counts_filtered, meta.data = meta_filtered,
                                     assay = "RNA", min.cells = 0, min.features = 0)
 rm(counts, counts_filtered, meta_filtered)
 
+data[["RNA"]] <- split(data[["RNA"]], f = data$sample_id)   # one layer per batch
+
 ##Sanity check: all three must agree (expected 28,126 genes x 37,407 cells)
 ncol(data)
 nrow(data@meta.data)
@@ -114,10 +116,11 @@ elbow_plot<-ElbowPlot(data)
 ggsave(filename="Module1 (Exploratory Analysis)/results/PCA/Elbow_plot.png", plot=elbow_plot,width = 8, height = 6, dpi = 300)
 
 #Integration
-data_Harmony <- IntegrateLayers(object = data, method = CCAIntegration, orig.reduction = "pca", new.reduction = "integrated.cca",
-                                  verbose = FALSE)
+data <- IntegrateLayers(object = data, method = HarmonyIntegration,
+                        orig.reduction = "pca", new.reduction = "harmony",
+                        normalization.method = "SCT", verbose = FALSE)
 
-data<-FindVariableFeatures(data, selection.method= "vst", nfeatures = 2000)
+
 
 ##Identify the 10 most highly variable genes
 top10 <- head(VariableFeatures(data),10)
@@ -132,20 +135,12 @@ final_plot <- plot1a + plot2a
 final_plot
 ggsave(filename="Module1 (Exploratory Analysis)/results/s1_variable_features.png", plot=plot2a,width = 8, height = 6, dpi = 300)
 
-
-
-#Scale the data
-all.genes <- rownames(data)
-data <- ScaleData(data, features=all.genes)
-
-
-
 #Clusterization
-neigbours <- FindNeighbors(data, dims = 1:16)
+neigbours <- FindNeighbors(data, dims = 1:15)
 data <- FindClusters(neigbours, resolution = 0.5)
 
 #UMAP/t-SNE
-umap<-RunUMAP(data, dims= 1:16)
+umap<-RunUMAP(data, dims= 1:15)
 umap_plot<-DimPlot(umap, reduction = "umap")
 umap_plot
 ggsave(filename="Module1 (Exploratory Analysis)/results/UMAP/UMAP.png", plot=umap_plot,width = 8, height = 6, dpi = 300)
