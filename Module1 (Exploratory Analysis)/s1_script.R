@@ -2,8 +2,10 @@ set.seed(42)
 #Download the necessary libraries
 library(dplyr)
 library(Seurat)
+library(SeuratData)
 library(qs2)
 library(ggplot2)
+library(sctransform)
 
 #Read Data
 data<-qs_read("Inputs/External/stripped_s1_harmony_tumor_cells.qs2")
@@ -72,39 +74,57 @@ counts_filtered <- counts[, keep_cells]
 meta_filtered <- data@meta.data[keep_cells, setdiff(colnames(data@meta.data), c("nCount_RNA", "nFeature_RNA")), drop = FALSE]
 
 ##Rebuild a clean, RNA-only object (min.cells/min.features = 0 so no extra filtering happens)
-data_filtered <- CreateSeuratObject(counts = counts_filtered, meta.data = meta_filtered,
+data <- CreateSeuratObject(counts = counts_filtered, meta.data = meta_filtered,
                                     assay = "RNA", min.cells = 0, min.features = 0)
 rm(counts, counts_filtered, meta_filtered)
 
 ##Sanity check: all three must agree (expected 28,126 genes x 37,407 cells)
-ncol(data_filtered)
-nrow(data_filtered@meta.data)
-dim(data_filtered[["RNA"]])
+ncol(data)
+nrow(data@meta.data)
+dim(data[["RNA"]])
 stopifnot(
-  ncol(data_filtered) == length(keep_cells),
-  nrow(data_filtered@meta.data) == length(keep_cells),
-  ncol(data_filtered[["RNA"]]) == length(keep_cells),
-  identical(colnames(data_filtered), rownames(data_filtered@meta.data))
+  ncol(data) == length(keep_cells),
+  nrow(data@meta.data) == length(keep_cells),
+  ncol(data[["RNA"]]) == length(keep_cells),
+  identical(colnames(data), rownames(data@meta.data))
 )
 
-#Normalization of the data
-##From the tutorial (https://satijalab.org/seurat/articles/pbmc3k_tutorial),we follow the instructions and proccess the data like that
+#Normalization of the data with SCTransform()
+data <- PercentageFeatureSet(data, pattern = "^MT-", col.name = 'percent.mt')
+data<- SCTransform(data)
 
-data_normalized<- NormalizeData(data_filtered)
-
-dim(data_normalized)
-dim(data_filtered)
+dim(data)
+dim(data)
 
 #Identification of highly variable features
 
-data_normalized<-FindVariableFeatures(data_normalized, selection.method= "vst", nfeatures = 2000)
+#PCA
+data <- RunPCA(data, features = VariableFeatures(object = data))
+pca1<-VizDimLoadings(data,dim =1:2, reduction ="pca")
+pca1
+ggsave(filename="Module1 (Exploratory Analysis)/results/PCA/most_imp_genes.png", plot=pca1,width = 8, height = 6, dpi = 300)
+
+pca2<-DimPlot(data, reduction = "pca")
+pca2
+ggsave(filename="Module1 (Exploratory Analysis)/results/PCA/PCA.png", plot=pca2,width = 8, height = 6, dpi = 300)
+
+DimHeatmap(data, dims = 1, cells = 500, balanced = TRUE)
+
+elbow_plot<-ElbowPlot(data)
+ggsave(filename="Module1 (Exploratory Analysis)/results/PCA/Elbow_plot.png", plot=elbow_plot,width = 8, height = 6, dpi = 300)
+
+#Integration
+data_Harmony <- IntegrateLayers(object = data, method = CCAIntegration, orig.reduction = "pca", new.reduction = "integrated.cca",
+                                  verbose = FALSE)
+
+data<-FindVariableFeatures(data, selection.method= "vst", nfeatures = 2000)
 
 ##Identify the 10 most highly variable genes
-top10 <- head(VariableFeatures(data_normalized),10)
+top10 <- head(VariableFeatures(data),10)
 top10
 
 ##Plot variable features with and without labels
-plot1a <- VariableFeaturePlot(data_normalized)
+plot1a <- VariableFeaturePlot(data)
 plot1a
 plot2a <- LabelPoints(plot = plot1a, points = top10, repel = TRUE)
 plot2a
@@ -112,29 +132,21 @@ final_plot <- plot1a + plot2a
 final_plot
 ggsave(filename="Module1 (Exploratory Analysis)/results/s1_variable_features.png", plot=plot2a,width = 8, height = 6, dpi = 300)
 
+
+
 #Scale the data
-all.genes <- rownames(data_normalized)
-data_scaled <- ScaleData(data_normalized, features=all.genes)
+all.genes <- rownames(data)
+data <- ScaleData(data, features=all.genes)
 
-#PCA
-data_red <- RunPCA(data_scaled, features = VariableFeatures(object = data_scaled))
-pca1<-VizDimLoadings(data_red,dim =1:2, reduction ="pca")
-ggsave(filename="Module1 (Exploratory Analysis)/results/PCA/most_imp_genes.png", plot=pca1,width = 8, height = 6, dpi = 300)
 
-pca2<-DimPlot(data_red, reduction = "pca")
-ggsave(filename="Module1 (Exploratory Analysis)/results/PCA/PCA.png", plot=pca2,width = 8, height = 6, dpi = 300)
-
-DimHeatmap(data_red, dims = 1, cells = 500, balanced = TRUE)
-
-elbow_plot<-ElbowPlot(data_red)
-ggsave(filename="Module1 (Exploratory Analysis)/results/PCA/Elbow_plot.png", plot=elbow_plot,width = 8, height = 6, dpi = 300)
 
 #Clusterization
-neigbours <- FindNeighbors(data_red, dims = 1:16)
-data_clus <- FindClusters(neigbours, resolution = 0.5)
+neigbours <- FindNeighbors(data, dims = 1:16)
+data <- FindClusters(neigbours, resolution = 0.5)
 
 #UMAP/t-SNE
-umap<-RunUMAP(data_clus, dims= 1:16)
+umap<-RunUMAP(data, dims= 1:16)
 umap_plot<-DimPlot(umap, reduction = "umap")
+umap_plot
 ggsave(filename="Module1 (Exploratory Analysis)/results/UMAP/UMAP.png", plot=umap_plot,width = 8, height = 6, dpi = 300)
 
