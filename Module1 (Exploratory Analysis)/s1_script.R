@@ -116,6 +116,7 @@ elbow_plot<-ElbowPlot(data)
 ggsave(filename="Module1 (Exploratory Analysis)/results/PCA/Elbow_plot.png", plot=elbow_plot,width = 8, height = 6, dpi = 300)
 
 #Integration
+##Harmony
 data <- IntegrateLayers(object = data, method = HarmonyIntegration,
                         orig.reduction = "pca", new.reduction = "harmony",
                         normalization.method = "SCT", verbose = FALSE)
@@ -141,7 +142,7 @@ data <- FindClusters(neigbours, resolution = 0.5)
 
 #UMAP/t-SNE
 data<-RunUMAP(data, reduction = "harmony", dims = 1:30, reduction.name = "umap.harmony")
-umap_plot<-DimPlot(data, reduction = "umap.harmony", group.by = c("patient_id", "sample_id", "seurat_clusters"))
+umap_plot<-DimPlot(data, reduction = "umap.harmony")
 umap_plot
 ggsave(filename="Module1 (Exploratory Analysis)/results/UMAP/UMAP.png", plot=umap_plot,width = 8, height = 6, dpi = 300)
 
