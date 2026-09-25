@@ -56,7 +56,7 @@ packageVersion("Seurat")
 packageVersion("SeuratObject")
 
 ##QC-passing barcodes, taken from meta.data
-qc_pass <- with(data@meta.data, nFeature_RNA > 500 & nFeature_RNA < 7500 & percent.mt < 10)
+qc_pass <- with(data@meta.data, nFeature_RNA > 500 & nFeature_RNA < 7500 & percent.mt < 15)
 keep_cells <- rownames(data@meta.data)[qc_pass]
 length(keep_cells)
 
@@ -78,7 +78,7 @@ data <- CreateSeuratObject(counts = counts_filtered, meta.data = meta_filtered,
                                     assay = "RNA", min.cells = 0, min.features = 0)
 rm(counts, counts_filtered, meta_filtered)
 
-data[["RNA"]] <- split(data[["RNA"]], f = data$sample_id)   # one layer per batch
+data[["RNA"]] <- split(data[["RNA"]], f = data$patient_id)   # one layer per batch
 
 ##Sanity check: all three must agree (expected 28,126 genes x 37,407 cells)
 ncol(data)
@@ -136,12 +136,12 @@ final_plot
 ggsave(filename="Module1 (Exploratory Analysis)/results/s1_variable_features.png", plot=plot2a,width = 8, height = 6, dpi = 300)
 
 #Clusterization
-neigbours <- FindNeighbors(data, dims = 1:15)
+neigbours <- FindNeighbors(data, reduction = "harmony", dims = 1:30)
 data <- FindClusters(neigbours, resolution = 0.5)
 
 #UMAP/t-SNE
-umap<-RunUMAP(data, dims= 1:15)
-umap_plot<-DimPlot(umap, reduction = "umap")
+data<-RunUMAP(data, reduction = "harmony", dims = 1:30, reduction.name = "umap.harmony")
+umap_plot<-DimPlot(data, reduction = "umap.harmony", group.by = c("patient_id", "sample_id", "seurat_clusters"))
 umap_plot
 ggsave(filename="Module1 (Exploratory Analysis)/results/UMAP/UMAP.png", plot=umap_plot,width = 8, height = 6, dpi = 300)
 
