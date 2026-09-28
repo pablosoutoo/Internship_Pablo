@@ -131,9 +131,20 @@ elbow_plot<-ElbowPlot(data)
 ggsave(filename="Module1 (Exploratory Analysis)/results/PCA/Elbow_plot.png", plot=elbow_plot,width = 8, height = 6, dpi = 300)
 
 #Integration
-##Harmony
+#We integrate the same object with two different methods so we can compare them afterwards.
+#Both start from the same SCT-normalised, per-patient layers and the same PCA, so any
+#difference between the results comes from the integration method itself.
+
+##Harmony (cluster-level correction of the PCA embedding)
 data <- IntegrateLayers(object = data, method = HarmonyIntegration,
                         orig.reduction = "pca", new.reduction = "harmony",
+                        normalization.method = "SCT", verbose = FALSE)
+
+##CCA (Seurat anchors: cell-level mutual nearest neighbours in a shared CCA space)
+##This is the method used in the original tumour analysis (Tumor_Analysis_Code.R).
+##It is slower and uses more memory than Harmony, so it may take a while on Hooke.
+data <- IntegrateLayers(object = data, method = CCAIntegration,
+                        orig.reduction = "pca", new.reduction = "integrated.cca",
                         normalization.method = "SCT", verbose = FALSE)
 
 
@@ -164,12 +175,103 @@ plot2a
 ggsave(filename="Module1 (Exploratory Analysis)/results/s1_variable_features.png", plot=plot2a,width = 8, height = 6, dpi = 300)
 
 #Clusterization
-neigbours <- FindNeighbors(data, reduction = "harmony", dims = 1:15)
-data <- FindClusters(neigbours, resolution = 0.5)
+#Same dims and resolution for both methods so the comparison is fair.
+#Each method gets its own graph and cluster column, so nothing is overwritten.
+#(Do not use "harmony_clusters" as a name: that column holds the lab's original clusters.)
+
+##Harmony
+data <- FindNeighbors(data, reduction = "harmony", dims = 1:15,
+                      graph.name = c("harmony_nn", "harmony_snn"))
+data <- FindClusters(data, graph.name = "harmony_snn", resolution = 0.5,
+                     cluster.name = "clusters_harmony")
+
+##CCA
+data <- FindNeighbors(data, reduction = "integrated.cca", dims = 1:15,
+                      graph.name = c("cca_nn", "cca_snn"))
+data <- FindClusters(data, graph.name = "cca_snn", resolution = 0.5,
+                     cluster.name = "clusters_cca")
+
+table(data$clusters_harmony)
+table(data$clusters_cca)
 
 #UMAP/t-SNE
-data<-RunUMAP(data, reduction = "harmony", dims = 1:15, reduction.name = "umap.harmony")
-umap_plot<-DimPlot(data, reduction = "umap.harmony", group.by = "patient_id")
+data <- RunUMAP(data, reduction = "harmony", dims = 1:15, reduction.name = "umap.harmony")
+data <- RunUMAP(data, reduction = "integrated.cca", dims = 1:15, reduction.name = "umap.cca")
+
+umap_plot<-DimPlot(data, reduction = "umap.harmony", group.by = "patient_id", shuffle = TRUE)
 umap_plot
 ggsave(filename="Module1 (Exploratory Analysis)/results/UMAP/UMAP.png", plot=umap_plot,width = 8, height = 6, dpi = 300)
+
+#Comparison of the two integration methods
+comp_dir <- "Module1 (Exploratory Analysis)/results/Integration_comparison"
+dir.create(comp_dir, showWarnings = FALSE, recursive = TRUE)
+
+##1. UMAPs side by side: top row coloured by patient (batch mixing), bottom row by cluster
+umap_compare <- patchwork::wrap_plots(
+  DimPlot(data, reduction = "umap.harmony", group.by = "patient_id", shuffle = TRUE) + ggtitle("Harmony - patient"),
+  DimPlot(data, reduction = "umap.cca", group.by = "patient_id", shuffle = TRUE) + ggtitle("CCA - patient"),
+  DimPlot(data, reduction = "umap.harmony", group.by = "clusters_harmony", label = TRUE) + NoLegend() + ggtitle("Harmony - clusters"),
+  DimPlot(data, reduction = "umap.cca", group.by = "clusters_cca", label = TRUE) + NoLegend() + ggtitle("CCA - clusters"),
+  ncol = 2)
+umap_compare
+ggsave(filename = file.path(comp_dir, "s1_UMAP_harmony_vs_cca.png"), plot = umap_compare, width = 14, height = 12, dpi = 300)
+
+##2. Agreement between clusterings: Adjusted Rand Index (1 = identical, ~0 = random)
+##Written in base R so no extra package is needed on Hooke.
+ari <- function(x, y) {
+  tab      <- table(x, y)
+  sum_ij   <- sum(choose(tab, 2))
+  sum_a    <- sum(choose(rowSums(tab), 2))
+  sum_b    <- sum(choose(colSums(tab), 2))
+  expected <- sum_a * sum_b / choose(sum(tab), 2)
+  (sum_ij - expected) / ((sum_a + sum_b) / 2 - expected)
+}
+ari_table <- data.frame(
+  comparison = c("Harmony vs CCA",
+                 "Harmony vs original lab clusters",
+                 "CCA vs original lab clusters"),
+  ARI = c(ari(data$clusters_harmony, data$clusters_cca),
+          ari(data$clusters_harmony, data$harmony_clusters),
+          ari(data$clusters_cca,     data$harmony_clusters)))
+ari_table
+write.csv(ari_table, file.path(comp_dir, "s1_ARI_integration_methods.csv"), row.names = FALSE)
+
+##3. Which Harmony cluster corresponds to which CCA cluster (row-normalised)
+cross <- as.data.frame(prop.table(table(harmony = data$clusters_harmony,
+                                        cca = data$clusters_cca), margin = 1))
+cross_plot <- ggplot(cross, aes(cca, harmony, fill = Freq)) +
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "darkred", name = "Fraction of\nHarmony cluster") +
+  labs(x = "CCA cluster", y = "Harmony cluster") +
+  theme_classic()
+cross_plot
+ggsave(filename = file.path(comp_dir, "s1_cluster_crosstab_harmony_vs_cca.png"), plot = cross_plot, width = 8, height = 7, dpi = 300)
+
+##4. Patient mixing per cluster: normalised Shannon entropy of patient_id
+##(1 = cells evenly spread over all patients, 0 = cluster made of a single patient).
+##Clusters close to 0 are patient-specific; compare how many each method keeps.
+patient_mixing <- function(clusters, patients, method) {
+  tab <- table(clusters, patients)
+  p   <- prop.table(tab, margin = 1)
+  ent <- apply(p, 1, function(x) { x <- x[x > 0]; -sum(x * log(x)) }) / log(ncol(tab))
+  data.frame(method = method, cluster = rownames(tab), n_cells = rowSums(tab),
+             mixing = ent, top_patient = colnames(tab)[apply(tab, 1, which.max)])
+}
+mixing <- rbind(patient_mixing(data$clusters_harmony, data$patient_id, "Harmony"),
+                patient_mixing(data$clusters_cca,     data$patient_id, "CCA"))
+mixing
+write.csv(mixing, file.path(comp_dir, "s1_patient_mixing_per_cluster.csv"), row.names = FALSE)
+
+##5. Patient composition of each cluster
+comp_plot <- function(cluster_col, title) {
+  ggplot(data@meta.data, aes(x = .data[[cluster_col]], fill = patient_id)) +
+    geom_bar(position = "fill") +
+    labs(x = "Cluster", y = "Fraction of cells", title = title) +
+    theme_classic()
+}
+composition <- patchwork::wrap_plots(comp_plot("clusters_harmony", "Harmony"),
+                                     comp_plot("clusters_cca", "CCA"),
+                                     ncol = 1, guides = "collect")
+composition
+ggsave(filename = file.path(comp_dir, "s1_patient_composition_per_cluster.png"), plot = composition, width = 10, height = 8, dpi = 300)
 
