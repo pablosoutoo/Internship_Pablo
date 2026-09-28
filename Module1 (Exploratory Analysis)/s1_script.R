@@ -50,7 +50,7 @@ data[["ADT"]] <- NULL
 Assays(data)
 data[["RNA"]]
 
-#For the write-up: record the versions and assay class involved in the subset() bug
+#For the record I'll write down the versions and assay class involved in the subset() bug
 class(data[["RNA"]])
 packageVersion("Seurat")
 packageVersion("SeuratObject")
@@ -91,14 +91,14 @@ stopifnot(
   identical(colnames(data), rownames(data@meta.data))
 )
 
-## Marcar dobletes tumor–T (el objeto aún tiene una sola capa de counts)
+## Mark doublets tumor–T (the object still has only one layer counts)
 cnt   <- LayerData(data, assay = "RNA", layer = "counts")
 t_id  <- c("CD3D", "CD3E", "CD2", "CD8A")
 cyto  <- c("NKG7", "GZMB", "GZMA", "CCL5", "PRF1", "CST7")
 data$T_doublet <- colSums(cnt[t_id, ] > 0) >= 2 & colSums(cnt[cyto, ] > 0) >= 2
 table(data$T_doublet, data$sample_id)
 rm(cnt)
-data <- subset(data, subset = T_doublet == FALSE)   # funciona: el objeto ya está reconstruido
+data <- subset(data, subset = T_doublet == FALSE)   # works: object already built
 
 #Normalization of the data with SCTransform()
 data <- PercentageFeatureSet(data, pattern = "^MT-", col.name = 'percent.mt')
