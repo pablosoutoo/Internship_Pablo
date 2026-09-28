@@ -78,7 +78,6 @@ data <- CreateSeuratObject(counts = counts_filtered, meta.data = meta_filtered,
                                     assay = "RNA", min.cells = 0, min.features = 0)
 rm(counts, counts_filtered, meta_filtered)
 
-data[["RNA"]] <- split(data[["RNA"]], f = data$patient_id)   # one layer per batch
 
 ##Sanity check: all three must agree (expected 28,126 genes x 37,407 cells)
 ncol(data)
@@ -99,6 +98,8 @@ data$T_doublet <- colSums(cnt[t_id, ] > 0) >= 2 & colSums(cnt[cyto, ] > 0) >= 2
 table(data$T_doublet, data$sample_id)
 rm(cnt)
 data <- subset(data, subset = T_doublet == FALSE)   # works: object already built
+data[["RNA"]] <- split(data[["RNA"]], f = data$patient_id)
+stopifnot(length(unique(data$patient_id)) > 1)
 
 #Normalization of the data with SCTransform()
 data <- PercentageFeatureSet(data, pattern = "^MT-", col.name = 'percent.mt')
@@ -142,21 +143,33 @@ top10 <- head(VariableFeatures(data),10)
 top10
 
 ##Plot variable features with and without labels
-plot1a <- VariableFeaturePlot(data)
-plot1a
-plot2a <- LabelPoints(plot = plot1a, points = top10, repel = TRUE)
+hvf <- SCTResults(data[["SCT"]], slot = "feature.attributes")
+if (is.data.frame(hvf)) hvf <- list(all = hvf)
+hvf_df <- do.call(rbind, lapply(names(hvf), function(m) data.frame(
+  model = m, gene = rownames(hvf[[m]]),
+  gmean = hvf[[m]]$gmean, residual_variance = hvf[[m]]$residual_variance)))
+hvf_df$variable <- hvf_df$gene %in% VariableFeatures(data)
+plot2a <- ggplot(hvf_df, aes(gmean, residual_variance, colour = variable)) +
+  geom_point(size = 0.3) +
+  scale_x_log10() + scale_y_log10() +
+  scale_colour_manual(values = c(`FALSE` = "black", `TRUE` = "red"),
+                      labels = c("no", "yes"), name = "Variable") +
+  ggrepel::geom_text_repel(data = subset(hvf_df, gene %in% top10), aes(label = gene),
+                           colour = "black", size = 2.5, max.overlaps = Inf) +
+  facet_wrap(~ model) +
+  labs(x = "Geometric mean of expression", y = "Residual variance") +
+  theme_classic()
 plot2a
-final_plot <- plot1a + plot2a
-final_plot
+
 ggsave(filename="Module1 (Exploratory Analysis)/results/s1_variable_features.png", plot=plot2a,width = 8, height = 6, dpi = 300)
 
 #Clusterization
-neigbours <- FindNeighbors(data, reduction = "harmony", dims = 1:30)
+neigbours <- FindNeighbors(data, reduction = "harmony", dims = 1:15)
 data <- FindClusters(neigbours, resolution = 0.5)
 
 #UMAP/t-SNE
-data<-RunUMAP(data, reduction = "harmony", dims = 1:30, reduction.name = "umap.harmony")
-umap_plot<-DimPlot(data, reduction = "umap.harmony")
+data<-RunUMAP(data, reduction = "harmony", dims = 1:15, reduction.name = "umap.harmony")
+umap_plot<-DimPlot(data, reduction = "umap.harmony", group.by = "patient_id")
 umap_plot
 ggsave(filename="Module1 (Exploratory Analysis)/results/UMAP/UMAP.png", plot=umap_plot,width = 8, height = 6, dpi = 300)
 
