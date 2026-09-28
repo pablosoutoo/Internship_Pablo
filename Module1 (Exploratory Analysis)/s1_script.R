@@ -275,3 +275,7 @@ composition <- patchwork::wrap_plots(comp_plot("clusters_harmony", "Harmony"),
 composition
 ggsave(filename = file.path(comp_dir, "s1_patient_composition_per_cluster.png"), plot = composition, width = 10, height = 8, dpi = 300)
 
+#Save the integrated object so s2_script.R (annotation) can start from here without re-running s1.
+#It is a large file: intermediate/ is git-ignored, sync it to SurfDrive with rclone instead.
+dir.create("Module1 (Exploratory Analysis)/intermediate", showWarnings = FALSE)
+qs_save(data, "Module1 (Exploratory Analysis)/intermediate/s1_integrated_harmony_cca.qs2")
