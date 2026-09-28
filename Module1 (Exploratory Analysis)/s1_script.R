@@ -145,13 +145,27 @@ data <- IntegrateLayers(object = data, method = HarmonyIntegration,
 top10 <- head(VariableFeatures(data),10)
 top10
 
-##Plot variable features with and without labels
-plot1a <- VariableFeaturePlot(data)
-plot1a
-plot2a <- LabelPoints(plot = plot1a, points = top10, repel = TRUE)
+##Plot variable features, one panel per SCT model (patient)
+## VariableFeaturePlot() can't be used here: with one SCT model per patient,
+## SCTResults() returns a list and HVFInfo.SCTAssay fails with
+## "incorrect number of dimensions". Build the same plot from the per-model attributes.
+hvf <- SCTResults(data[["SCT"]], slot = "feature.attributes")
+if (is.data.frame(hvf)) hvf <- list(all = hvf)
+hvf_df <- do.call(rbind, lapply(names(hvf), function(m) data.frame(
+  model = m, gene = rownames(hvf[[m]]),
+  gmean = hvf[[m]]$gmean, residual_variance = hvf[[m]]$residual_variance)))
+hvf_df$variable <- hvf_df$gene %in% VariableFeatures(data)
+plot2a <- ggplot(hvf_df, aes(gmean, residual_variance, colour = variable)) +
+  geom_point(size = 0.3) +
+  scale_x_log10() + scale_y_log10() +
+  scale_colour_manual(values = c(`FALSE` = "black", `TRUE` = "red"),
+                      labels = c("no", "yes"), name = "Variable") +
+  ggrepel::geom_text_repel(data = subset(hvf_df, gene %in% top10), aes(label = gene),
+                           colour = "black", size = 2.5, max.overlaps = Inf) +
+  facet_wrap(~ model) +
+  labs(x = "Geometric mean of expression", y = "Residual variance") +
+  theme_classic()
 plot2a
-final_plot <- plot1a + plot2a
-final_plot
 ggsave(filename="Module1 (Exploratory Analysis)/results/s1_variable_features.png", plot=plot2a,width = 8, height = 6, dpi = 300)
 
 #Clusterization
