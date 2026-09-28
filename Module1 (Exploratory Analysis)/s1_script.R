@@ -91,9 +91,23 @@ stopifnot(
   identical(colnames(data), rownames(data@meta.data))
 )
 
+## Marcar dobletes tumor–T (el objeto aún tiene una sola capa de counts)
+cnt   <- LayerData(data, assay = "RNA", layer = "counts")
+t_id  <- c("CD3D", "CD3E", "CD2", "CD8A")
+cyto  <- c("NKG7", "GZMB", "GZMA", "CCL5", "PRF1", "CST7")
+data$T_doublet <- colSums(cnt[t_id, ] > 0) >= 2 & colSums(cnt[cyto, ] > 0) >= 2
+table(data$T_doublet, data$sample_id)
+rm(cnt)
+data <- subset(data, subset = T_doublet == FALSE)   # funciona: el objeto ya está reconstruido
+
 #Normalization of the data with SCTransform()
 data <- PercentageFeatureSet(data, pattern = "^MT-", col.name = 'percent.mt')
 data<- SCTransform(data)
+
+drop <- c(grep("^(MT-|RP[SL]\\d|TR[ABDG][VJC]|IG[HKL][VJC])", rownames(data), value = TRUE),
+          "HTN1", "HTN3", "STATH", t_id, cyto,
+          "PTPRC", "IL32", "CD52", "CORO1A", "CCL4", "CD7", "LAG3", "CD69")
+VariableFeatures(data) <- setdiff(VariableFeatures(data), drop)
 
 dim(data)
 dim(data)
