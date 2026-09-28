@@ -78,8 +78,6 @@ data <- CreateSeuratObject(counts = counts_filtered, meta.data = meta_filtered,
                                     assay = "RNA", min.cells = 0, min.features = 0)
 rm(counts, counts_filtered, meta_filtered)
 
-data[["RNA"]] <- split(data[["RNA"]], f = data$patient_id)   # one layer per batch
-
 ##Sanity check: all three must agree (expected 28,126 genes x 37,407 cells)
 ncol(data)
 nrow(data@meta.data)
@@ -99,6 +97,12 @@ data$T_doublet <- colSums(cnt[t_id, ] > 0) >= 2 & colSums(cnt[cyto, ] > 0) >= 2
 table(data$T_doublet, data$sample_id)
 rm(cnt)
 data <- subset(data, subset = T_doublet == FALSE)   # funciona: el objeto ya está reconstruido
+
+## Split into one layer per batch only now: done earlier, LayerData(layer = "counts")
+## above returns just the first patient's layer, T_doublet is NA for everyone else,
+## subset() drops them, and IntegrateLayers() fails with a single-level batch factor.
+data[["RNA"]] <- split(data[["RNA"]], f = data$patient_id)
+stopifnot(length(unique(data$patient_id)) > 1)
 
 #Normalization of the data with SCTransform()
 data <- PercentageFeatureSet(data, pattern = "^MT-", col.name = 'percent.mt')
