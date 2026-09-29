@@ -142,7 +142,7 @@ data <- IntegrateLayers(object = data, method = HarmonyIntegration,
                         normalization.method = "SCT", verbose = FALSE)
 
 harmony_integration <-function(data,theta,lambda,max_iter,sigma){
-   
+   set.seed(42)
    data <- IntegrateLayers(
       object = data, 
       method = HarmonyIntegration,
@@ -170,22 +170,44 @@ harmony_integration <-function(data,theta,lambda,max_iter,sigma){
     params_text <- paste0("theta = ",theta, " | lambda = ", lambda, " | max.iter.harmony =", max_iter, " | sigma = ", sigma)
      
     #A filename with the values
-    file_name <- paste0("Module1 (Exploratory Analysis)/results/UMAP/UMAP_theta", theta,
+    file_name <- paste0("Module1 (Exploratory Analysis)/results/UMAP/harmony_grid/UMAP_theta", theta,
                         "_lambda", lambda, "_max.iter.harmony" ,max_iter, "_sigma",sigma  , ".png")
     
     
-    umap_plot <- DimPlot(data, reduction = "umap.harmony",
-                        group.by = "clusters_harmony", label = TRUE) +
-      ggtitle(params_text)
+    plot_clusters <- DimPlot(data, reduction = "umap.harmony",
+                        group.by = "clusters_harmony", label = TRUE)
+    
+    plot_patients <- DimPlot(data, reduction = "umap.harmony",
+                        group.by = "patient_id", label = TRUE) 
+
+    
+    umap_plot <- patchwork::wrap_plots(plot_clusters, plot_patients) + ggtitle(params_text)
     
     ggsave(filename = file_name, plot = umap_plot, width = 8, height = 6, dpi = 300)
     
     return(umap_plot)
 }
 
-test_plot <- harmony_integration(data, theta = 2, lambda = 1, max_iter = 10, sigma = 0.1)
-test_plot
+#test_plot <- harmony_integration(data, theta = 2, lambda = 1, max_iter = 10, sigma = 0.1)
+#test_plot
 
+grid <- expand.grid(theta = c(0,0.5, 1, 2, 4), lambda = 1, max_iter = 10, sigma = 0.1)
+grid   # print it: 4 rows = 4 runs
+
+plot_list <- list()
+
+for (i in 1:nrow(grid)) {
+  plot_list[[i]] <- harmony_integration(data, theta = grid$theta[i], lambda = grid$lambda[i], max_iter = grid$max_iter[i], sigma = grid$sigma[i])
+}
+
+big_plot <- patchwork::wrap_plots(plot_list, ncol = 2) +
+  patchwork::plot_annotation(
+    title    = "Harmony: efecto de theta",
+    subtitle = paste0("Fijos: lambda = ", grid$lambda[1], " | sigma = ",grid$sigma[1] , " | max_iter = ", grid$max_iter[1]),
+    caption  = paste0("Valores de theta probados: ", paste(grid$theta, collapse = ", "))
+  )
+ggsave(filename = paste0("Module1 (Exploratory Analysis)/results/UMAP/", "harmony_grid_theta.png"),
+       plot = big_plot, width = 16, height = 12, dpi = 300)
 
 ##CCA (Seurat anchors: cell-level mutual nearest neighbours in a shared CCA space)
 ##This is the method used in the original tumour analysis (Tumor_Analysis_Code.R).
