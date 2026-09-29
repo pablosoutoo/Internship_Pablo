@@ -30,7 +30,7 @@ ggsave(filename="Module1 (Exploratory Analysis)/results/s1_feat_scatt_1.png", pl
 ggsave(filename="Module1 (Exploratory Analysis)/results/s1_feat_scatt_2.png", plot=plot2,width = 8, height = 6, dpi = 300)
 
 #We filter the data in order to discard cells with a low gene expression and a high percentage of mithocondrial genes.
-#We'll keep the cells with at leats 500 genes detected and maximal 7500(nFeatureRNA), and below a 10% percentage of mithocondrial genes. 
+#We'll keep the cells with at leats 500 genes detected and maximal 7500(nFeatureRNA), and below a 15% percentage of mithocondrial genes (already in the paper). 
 
 # NOTE (2026-09-23): subset() is unreliable on this object. It trims meta.data
 # correctly (37,407 QC-passing cells) but leaves the RNA assay's counts matrix at
@@ -79,7 +79,7 @@ data <- CreateSeuratObject(counts = counts_filtered, meta.data = meta_filtered,
 rm(counts, counts_filtered, meta_filtered)
 
 
-##Sanity check: all three must agree (expected 28,126 genes x 37,407 cells)
+##Sanity check: all three must agree (28,126 genes x 44,478 cells)
 ncol(data)
 nrow(data@meta.data)
 dim(data[["RNA"]])
@@ -111,7 +111,6 @@ drop <- c(grep("^(MT-|RP[SL]\\d|TR[ABDG][VJC]|IG[HKL][VJC])", rownames(data), va
 VariableFeatures(data) <- setdiff(VariableFeatures(data), drop)
 
 dim(data)
-dim(data)
 
 #Identification of highly variable features
 
@@ -128,6 +127,8 @@ ggsave(filename="Module1 (Exploratory Analysis)/results/PCA/PCA.png", plot=pca2,
 DimHeatmap(data, dims = 1, cells = 500, balanced = TRUE)
 
 elbow_plot<-ElbowPlot(data)
+elbow_plot
+
 ggsave(filename="Module1 (Exploratory Analysis)/results/PCA/Elbow_plot.png", plot=elbow_plot,width = 8, height = 6, dpi = 300)
 
 #Integration
@@ -136,9 +137,36 @@ ggsave(filename="Module1 (Exploratory Analysis)/results/PCA/Elbow_plot.png", plo
 #difference between the results comes from the integration method itself.
 
 ##Harmony (cluster-level correction of the PCA embedding)
-data <- IntegrateLayers(object = data, method = HarmonyIntegration,
-                        orig.reduction = "pca", new.reduction = "harmony",
-                        normalization.method = "SCT", verbose = FALSE)
+harmony_integration <-function(theta,lambda,max_iter,sigma){
+    data <- IntegrateLayers(
+      object = data, 
+      method = HarmonyIntegration,
+      orig.reduction = "pca",
+      new.reduction = "harmony",
+      normalization.method = "SCT",
+      verbose = TRUE,
+      
+      #---Custom Harmony Parameters ---
+      theta = theta,
+      lambda = lambda,
+      max_iter = max_iter,
+      sigma = sigma,
+      
+      )
+    data <- FindNeighbors(data, reduction = "harmony", dims = 1:15,
+                          graph.name = c("harmony_nn", "harmony_snn"))
+    data <- FindClusters(data, graph.name = "harmony_snn", resolution = 0.5,
+                         cluster.name = "clusters_harmony")
+    
+    data <- RunUMAP(data, reduction = "harmony", dims = 1:15, reduction.name = "umap.harmony")
+    
+    umap_plot<-DimPlot(data, reduction = "umap.harmony", group.by = "patient_id", shuffle = TRUE)
+    
+    ggsave(filename="Module1 (Exploratory Analysis)/results/UMAP/UMAP_with_values_of_the_hyperparameters", plot=umap_plot,width = 8, height = 6, dpi = 300)
+
+}
+
+
 
 ##CCA (Seurat anchors: cell-level mutual nearest neighbours in a shared CCA space)
 ##This is the method used in the original tumour analysis (Tumor_Analysis_Code.R).
