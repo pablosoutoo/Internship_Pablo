@@ -166,6 +166,7 @@ harmony_integration <-function(theta,lambda,max_iter,sigma){
 
 }
 
+grid <- 
 
 
 ##CCA (Seurat anchors: cell-level mutual nearest neighbours in a shared CCA space)
