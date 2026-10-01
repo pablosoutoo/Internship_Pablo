@@ -382,7 +382,60 @@ data.markers %>%
   slice_max(avg_log2FC, n = 10)
 
 
+#Cell-population annotation of the CCA clusters
+##Same idea as the Seurat PBMC tutorial (one name per cluster), but these are melanoma tumour
+##cells, so the "populations" are tumour states (melanocytic, mitotic, neural crest-like,
+##mesenchymal-like, IFN response, stress...; Pozniak et al. 2024) rather than immune cell types.
+##The label is stored as a metadata column (cell_state_cca), so clusters_cca stays untouched.
+annot_dir <- "Module1 (Exploratory Analysis)/results/Annotation"
+dir.create(annot_dir, showWarnings = FALSE, recursive = TRUE)
 
+##1. Evidence: top markers per cluster + canonical genes of each state
+top_markers <- data.markers %>% group_by(cluster) %>% slice_max(avg_log2FC, n = 10)
+write.csv(top_markers, file.path(annot_dir, "s1_top10_markers_cca.csv"), row.names = FALSE)
+
+canonical <- c("MKI67", "TOP2A",                          #cycling
+               "MITF", "PMEL", "DCT", "MLANA", "TYR",     #melanocytic
+               "SOX10", "NGFR", "AXL", "SOX9",            #neural crest-like / dedifferentiated
+               "VIM", "SERPINE1", "FN1",                  #mesenchymal
+               "VEGFA", "CA9", "NDUFA4L2",                #hypoxia
+               "CXCL10", "STAT1", "B2M", "HLA-A",         #IFN response / MHC-I
+               "CD74", "HLA-DRA",                         #MHC-II
+               "HSPA6", "HSPA1A", "CDKN1A", "GDF15")      #stress (heat shock, p53)
+canonical <- intersect(canonical, rownames(data))
+dot_cca <- DotPlot(data, features = canonical, group.by = "clusters_cca", assay = "SCT") +
+  RotatedAxis() + ggtitle("CCA clusters - canonical genes")
+dot_cca
+ggsave(file.path(annot_dir, "s1_canonical_dotplot_cca.png"), dot_cca, width = 12, height = 6, dpi = 300)
+
+##2. One name per cluster. Fill these in after looking at the dot plot and the marker table;
+##clusters you are not sure about stay "Unassigned". Two clusters may share the same name.
+cca_labels <- setNames(rep("Unassigned", nlevels(data$clusters_cca)), levels(data$clusters_cca))
+cca_labels["0"]  <- "Neural crest-like"            #SOX10 high; NCMAP, SCN7A, SCRG1, ANGPTL7
+cca_labels["1"]  <- "Melanocytic"                  #PMEL, MLANA, MITF, DCT, TYR
+cca_labels["2"]  <- "Stress (ATF4 / amino acid)"   #ASNS, TRIB3, GDF15, CDKN1A (weak markers)
+cca_labels["3"]  <- "IFN response"                 #GBP1/4, IFIT2, IFI44L, STAT1, B2M, HLA-A
+cca_labels["4"]  <- "Mesenchymal-like (invasive)"  #MMP1, MMP3, IL11, SERPINB2, SERPINE1, INHBA
+cca_labels["5"]  <- "Stress (hypoxia)"             #NDUFA4L2, VEGFA, CA9, MT3
+cca_labels["6"]  <- "Melanocytic (pigmentation)"   #TYR, MITF, DCT high; low MHC-I
+cca_labels["7"]  <- "Mesenchymal-like (TGFb/YAP)"  #FN1, TAGLN, CCN1, CCN2, DKK1
+cca_labels["8"]  <- "Mitotic (G1/S)"               #E2F2, RRM2, MCM10, CDC45, CLSPN
+cca_labels["9"]  <- "Antigen presentation (MHC-II)" #CD74, HLA-DRA; B-cell genes in ~5% of cells
+cca_labels["10"] <- "Inflammatory (NF-kB)"         #CXCL10/11, CCL2, CXCL2, SELE, HSPA6
+cca_labels["11"] <- "Mitotic (G2/M)"               #PLK1, CDC20, KIF20A, MKI67, TOP2A
+cca_labels
+
+data$cell_state_cca <- unname(cca_labels[as.character(data$clusters_cca)])
+table(data$clusters_cca, data$cell_state_cca)
+
+##3. Labelled UMAP (one final CCA UMAP, with the setting you chose from the grid)
+data <- RunUMAP(data, reduction = "integrated.cca", dims = 1:15, reduction.name = "umap.cca",
+                n.neighbors = 30L, min.dist = 0.3)
+umap_states <- DimPlot(data, reduction = "umap.cca", group.by = "cell_state_cca",
+                       label = TRUE, repel = TRUE, pt.size = 0.5) + NoLegend() +
+  ggtitle("CCA clusters - cell states")
+umap_states
+ggsave(file.path(annot_dir, "s1_UMAP_cell_states_cca.png"), umap_states, width = 8, height = 6, dpi = 300)
 
 
 
