@@ -332,7 +332,7 @@ cca_integration <-function(data, n_neighbors, minimum_distance){
 
 cca_grid <- expand.grid(n_neighbors = c(10L,20L,30L,40L,50L), minimum_distance =c(0.1,0.2,0.3,0.4,0.5))
 cca_grid   # print it: 25 rows = 25 runs
-cca_results <- vector("list", nrow(grid))
+cca_results <- vector("list", nrow(cca_grid))
 
 for (i in 1:nrow(cca_grid)) {
   cca_results[[i]] <- cca_integration(data, n_neighbors = cca_grid$n_neighbors[i], minimum_distance = cca_grid$minimum_distance[i])
