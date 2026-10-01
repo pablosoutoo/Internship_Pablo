@@ -131,9 +131,23 @@ elbow_plot
 
 ggsave(filename="Module1 (Exploratory Analysis)/results/PCA/Elbow_plot.png", plot=elbow_plot,width = 8, height = 6, dpi = 300)
 
+#Integration
+#We integrate the same object with two different methods so we can compare them afterwards.
+#Both start from the same SCT-normalised, per-patient layers and the same PCA, so any
+#difference between the results comes from the integration method itself.
+
 #The grid functions below return only a light per-cell table (UMAP coordinates + clusters),
 #never the Seurat object or ggplot objects, so memory does not grow with every run.
-#Plots are rebuilt afterwards from that table with plot_umap_run().
+#All figures are rebuilt afterwards from that table.
+
+
+#Output folders
+harmony_dir      <- "Module1 (Exploratory Analysis)/results/UMAP/harmony_grid"
+cca_dir          <- "Module1 (Exploratory Analysis)/results/CCA/cca_grid"
+intermediate_dir <- "Module1 (Exploratory Analysis)/intermediate"
+for (d in c(harmony_dir, cca_dir, intermediate_dir)) dir.create(d, showWarnings = FALSE, recursive = TRUE)
+
+
 
 ##Rebuilds the "clusters + patients" figure from one run of the grid table.
 ##Mimics DimPlot: same point size, cluster labels at the median of each cluster,
@@ -151,21 +165,48 @@ plot_umap_run <- function(df, axis_prefix) {
     geom_text(data = centers, aes(label = cluster), colour = "black", size = 4) +
     labs(x = x_lab, y = y_lab) +
     theme_classic() +
-    NoLegend() +
-    ggtitle(params_text, subtitle = "Clusters")
+    NoLegend() 
   
-  set.seed(1)
+  set.seed(42)
   df_shuffled <- df[sample(nrow(df)), ]
   plot_patients <- ggplot(df_shuffled, aes(UMAP_1, UMAP_2, colour = patient_id)) +
     geom_point(size = pt_size, shape = 16) +
     labs(x = x_lab, y = y_lab, colour = "patient_id") +
     guides(colour = guide_legend(override.aes = list(size = 3))) +
-    theme_classic() +
-    ggtitle(params_text, subtitle = "Patients")
+    theme_classic() 
   
-  plot_clusters + plot_patients
+  patchwork::wrap_plots(plot_clusters, plot_patients) +
+    patchwork::plot_annotation(title = df$params[1],
+                               theme = theme(plot.title = element_text(size = 11)))
 }
 
+##Overview of a whole grid in ONE ggplot, faceted by the parameters (built from the table,
+##so it cannot pick up a stale grid or plot_list). colour_by = "cluster" or "patient_id".
+plot_grid_overview <- function(results, facet_formula, colour_by, title) {
+  facet_vars <- all.vars(facet_formula)
+  if (colour_by == "patient_id") {
+    set.seed(1)
+    results <- results[sample(nrow(results)), ]
+  }
+  p <- ggplot(results, aes(UMAP_1, UMAP_2, colour = .data[[colour_by]])) +
+    geom_point(size = 0.05, shape = 16) +
+    facet_grid(facet_formula, labeller = label_both) +
+    labs(title = title, colour = colour_by) +
+    theme_bw() +
+    theme(axis.text = element_blank(), axis.ticks = element_blank(),
+          axis.title = element_blank(), panel.grid = element_blank())
+  if (colour_by == "cluster") {
+    centers <- aggregate(results[, c("UMAP_1", "UMAP_2")],
+                         by = results[, c("cluster", facet_vars)], FUN = median)
+    p <- p + geom_text(data = centers, aes(label = cluster), colour = "black", size = 2.5) +
+      NoLegend()
+  } else {
+    p <- p + guides(colour = guide_legend(override.aes = list(size = 3)))
+  }
+  p
+}
+
+##Harmony (cluster-level correction of the PCA embedding)
 harmony_integration <-function(data,theta,lambda,max_iter,sigma){
    set.seed(42)
    data <- IntegrateLayers(
@@ -210,13 +251,16 @@ harmony_integration <-function(data,theta,lambda,max_iter,sigma){
 #test_df <- harmony_integration(data, theta = 2, lambda = 1, max_iter = 10, sigma = 0.1)
 #plot_umap_run(test_df, "umapharmony_")
 
-grid <- expand.grid(theta = c(0,0.5, 1, 2, 4), lambda = 1, max_iter = 10, sigma = 0.1)
-grid  
+#Each section has its own grid variable (harmony_grid / cca_grid), so running one section
+#on its own can never pick up the other section's parameters.
+harmony_grid <- expand.grid(theta = c(0,0.5, 1, 2, 4), lambda = 1, max_iter = 10, sigma = 0.1)
+harmony_grid   # print it: 5 rows = 5 runs
 
-harmony_results <- vector("list", nrow(grid))
+harmony_results <- vector("list", nrow(harmony_grid))
 
-for (i in 1:nrow(grid)) {
-  harmony_results[[i]] <- harmony_integration(data, theta = grid$theta[i], lambda = grid$lambda[i], max_iter = grid$max_iter[i], sigma = grid$sigma[i])
+for (i in 1:nrow(harmony_grid)) {
+  harmony_results[[i]] <- harmony_integration(data, theta = harmony_grid$theta[i], lambda = harmony_grid$lambda[i],
+                                              max_iter = harmony_grid$max_iter[i], sigma = harmony_grid$sigma[i])
   harmony_results[[i]]$run <- i
   gc()
 }
@@ -226,29 +270,29 @@ harmony_results <- do.call(rbind, harmony_results)
 dir.create("Module1 (Exploratory Analysis)/intermediate", showWarnings = FALSE)
 qs_save(harmony_results, "Module1 (Exploratory Analysis)/intermediate/s1_harmony_grid_results.qs2")
 
-
-plot_list <- list()
-for (i in 1:nrow(grid)) {
-  run_df <- harmony_results[harmony_results$run == i, ]
-  plot_list[[i]] <- plot_umap_run(run_df, "umapharmony_")
-  
-  #A filename with the values
-  file_name <- paste0("Module1 (Exploratory Analysis)/results/UMAP/harmony_grid/UMAP_theta", grid$theta[i],
-                      "_lambda", grid$lambda[i], "_max.iter.harmony" ,grid$max_iter[i], "_sigma",grid$sigma[i]  , ".png")
-  ggsave(filename = file_name, plot = plot_list[[i]], width = 8, height = 6, dpi = 300)
+#One PNG per run
+for (i in 1:nrow(harmony_grid)) {
+  umap_plot <- plot_umap_run(harmony_results[harmony_results$run == i, ], "umapharmony_")
+  file_name <- file.path(harmony_dir, paste0("UMAP_theta", harmony_grid$theta[i],
+                                             "_lambda", harmony_grid$lambda[i], "_max.iter.harmony", harmony_grid$max_iter[i],
+                                             "_sigma", harmony_grid$sigma[i], ".png"))
+  ggsave(filename = file_name, plot = umap_plot, width = 10, height = 5, dpi = 300)
 }
-rm(run_df)
+rm(umap_plot)
 
-big_plot <- patchwork::wrap_plots(plot_list, ncol = 1) +
+#Combined overview: top row clusters, bottom row patients, one column per theta
+harmony_overview <- patchwork::wrap_plots(
+  plot_grid_overview(harmony_results, ~ theta, "cluster",    "Clusters"),
+  plot_grid_overview(harmony_results, ~ theta, "patient_id", "Patients"),
+  ncol = 1) +
   patchwork::plot_annotation(
     title    = "Harmony: efecto de theta",
-    subtitle = paste0("Fijos: lambda = ", grid$lambda[1], " | sigma = ",grid$sigma[1] , " | max_iter = ", grid$max_iter[1]),
-    caption  = paste0("Valores de theta probados: ", paste(grid$theta, collapse = ", "))
-  )
-ggsave(filename = paste0("Module1 (Exploratory Analysis)/results/UMAP/", "harmony_grid_theta.png"),
-       plot = big_plot, width = 14, height = 5 * nrow(grid), dpi = 300)
-rm(big_plot, plot_list)
+    subtitle = paste0("Fijos: lambda = ", harmony_grid$lambda[1], " | sigma = ", harmony_grid$sigma[1], " | max_iter = ", harmony_grid$max_iter[1]))
+ggsave(filename = "Module1 (Exploratory Analysis)/results/UMAP/harmony_grid_theta.png",
+       plot = harmony_overview, width = 4 * nrow(harmony_grid), height = 9, dpi = 200)
+rm(harmony_overview)
 gc()
+
 
 ##CCA (Seurat anchors: cell-level mutual nearest neighbours in a shared CCA space)
 ##This is the method used in the original tumour analysis (Tumor_Analysis_Code.R).
@@ -286,60 +330,56 @@ cca_integration <-function(data, n_neighbors, minimum_distance){
 # test_plot
 
 
-grid <- expand.grid(n_neighbors = c(10L,20L,30L,40L,50L), minimum_distance =c(0.1,0.2,0.3,0.4,0.5))
-grid   # print it: 25 rows = 25 runs
-
+cca_grid <- expand.grid(n_neighbors = c(10L,20L,30L,40L,50L), minimum_distance =c(0.1,0.2,0.3,0.4,0.5))
+cca_grid   # print it: 25 rows = 25 runs
 cca_results <- vector("list", nrow(grid))
 
-for (i in 1:nrow(grid)) {
-  cca_results[[i]] <- cca_integration(data, n_neighbors = grid$n_neighbors[i], minimum_distance = grid$minimum_distance[i])
+for (i in 1:nrow(cca_grid)) {
+  cca_results[[i]] <- cca_integration(data, n_neighbors = cca_grid$n_neighbors[i], minimum_distance = cca_grid$minimum_distance[i])
   cca_results[[i]]$run <- i
   gc()
 }
 cca_results <- do.call(rbind, cca_results)
 
-#Save the table so the figures can be redone without re-running the UMAPs
-qs_save(cca_results, "Module1 (Exploratory Analysis)/intermediate/s1_cca_grid_results.qs2")
+#Save the table so the figures can be redone without re-running the UMAPs:
+#cca_results <- qs_read(file.path(intermediate_dir, "s1_cca_grid_results.qs2"))
+qs_save(cca_results, file.path(intermediate_dir, "s1_cca_grid_results.qs2"))
 
-plot_list <- list()
-for (i in 1:nrow(grid)) {
-  run_df <- cca_results[cca_results$run == i, ]
-  plot_list[[i]] <- plot_umap_run(run_df, "umapccaintegration_")
-  
-  #A filename with the values
-  file_name <- paste0("Module1 (Exploratory Analysis)/results/CCA/cca_grid/UMAP_minimum_distance", grid$minimum_distance[i],
-                      "_num_of_neighbors", grid$n_neighbors[i], ".png")
-  ggsave(filename = file_name, plot = plot_list[[i]], width = 8, height = 6, dpi = 300)
+#One PNG per run
+for (i in 1:nrow(cca_grid)) {
+  umap_plot <- plot_umap_run(cca_results[cca_results$run == i, ], "umapccaintegration_")
+  file_name <- file.path(cca_dir, paste0("UMAP_minimum_distance", cca_grid$minimum_distance[i],
+                                         "_num_of_neighbors", cca_grid$n_neighbors[i], ".png"))
+  ggsave(filename = file_name, plot = umap_plot, width = 10, height = 5, dpi = 300)
 }
-rm(run_df)
+rm(umap_plot)
 
 #Final CCA figure: two 5x5 grids instead of one 14 x 125 inch image.
-#Rows = minimum_distance, columns = n_neighbors (expand.grid varies n_neighbors fastest,
-#so filling the grid row by row puts each run in its place).
-panel_titles <- paste0("nn = ", grid$n_neighbors, " | md = ", grid$minimum_distance)
+#Rows = minimum_distance, columns = n_neighbors. The labels come from the table itself.
+cca_grid_clusters <- plot_grid_overview(cca_results, minimum_distance ~ n_neighbors, "cluster",
+                                        "CCA clusters: effect of number of neighbors and minimum distance")
+cca_grid_patients <- plot_grid_overview(cca_results, minimum_distance ~ n_neighbors, "patient_id",
+                                        "CCA patients: effect of number of neighbors and minimum distance")
 
-clusters_panels <- lapply(seq_along(plot_list), function(i)
-  plot_list[[i]][[1]] + ggtitle(panel_titles[i], subtitle = NULL) + NoAxes())
-patients_panels <- lapply(seq_along(plot_list), function(i)
-  plot_list[[i]][[2]] + ggtitle(panel_titles[i], subtitle = NULL) + NoAxes())
-
-grid_clusters <- patchwork::wrap_plots(clusters_panels, ncol = 5) +
-  patchwork::plot_annotation(
-    title    = "CCA clusters: efect of number of neighbors and minimum distance",
-    subtitle = "Rows: minimum distance | Columns: number of neighbors")
-
-grid_patients <- patchwork::wrap_plots(patients_panels, ncol = 5, guides = "collect") +
-  patchwork::plot_annotation(
-    title    = "CCA patients: efect of number of neighbors and minimum distance",
-    subtitle = "Rows: minimum distance | Columns: number of neighbors")
-
-ggsave(filename = paste0("Module1 (Exploratory Analysis)/results/CCA/", "cca_grid_clusters.png"),
-       plot = grid_clusters, width = 17.5, height = 17.5, dpi = 150)
-ggsave(filename = paste0("Module1 (Exploratory Analysis)/results/CCA/", "cca_grid_patients.png"),
-       plot = grid_patients, width = 17.5, height = 17.5, dpi = 150)
-rm(grid_clusters, grid_patients, clusters_panels, patients_panels, plot_list)
+ggsave(filename = "Module1 (Exploratory Analysis)/results/CCA/cca_grid_clusters.png",
+       plot = cca_grid_clusters, width = 17.5, height = 17.5, dpi = 150)
+ggsave(filename = "Module1 (Exploratory Analysis)/results/CCA/cca_grid_patients.png",
+       plot = cca_grid_patients, width = 19, height = 17.5, dpi = 150)
+rm(cca_grid_clusters, cca_grid_patients)
 gc()
 
+#FindAllMarkers
+##SCTransform was run per patient, so the SCT assay holds one model per patient.
+##FindMarkers refuses that until PrepSCTFindMarkers() puts all cells on the same scale.
+##FindAllMarkers catches that error for every cluster (it only shows up in warnings()) and
+##returns an EMPTY table without a "cluster" column, which is what made group_by(cluster) fail.
+data <- PrepSCTFindMarkers(data, assay = "SCT")
+Idents(data) <- "clusters_cca"
+data.markers <- FindAllMarkers(data, assay = "SCT", only.pos = TRUE)
+stopifnot(nrow(data.markers) > 0)   # if this stops, run warnings() to see why each cluster failed
+data.markers %>%
+  group_by(cluster) %>%
+  slice_max(avg_log2FC, n = 10)
 
 
 
@@ -355,137 +395,3 @@ gc()
 
 
 
-
-
-
-
-##Identify the 10 most highly variable genes
-top10 <- head(VariableFeatures(data),10)
-top10
-
-##Plot variable features with and without labels
-hvf <- SCTResults(data[["SCT"]], slot = "feature.attributes")
-if (is.data.frame(hvf)) hvf <- list(all = hvf)
-hvf_df <- do.call(rbind, lapply(names(hvf), function(m) data.frame(
-  model = m, gene = rownames(hvf[[m]]),
-  gmean = hvf[[m]]$gmean, residual_variance = hvf[[m]]$residual_variance)))
-hvf_df$variable <- hvf_df$gene %in% VariableFeatures(data)
-plot2a <- ggplot(hvf_df, aes(gmean, residual_variance, colour = variable)) +
-  geom_point(size = 0.3) +
-  scale_x_log10() + scale_y_log10() +
-  scale_colour_manual(values = c(`FALSE` = "black", `TRUE` = "red"),
-                      labels = c("no", "yes"), name = "Variable") +
-  ggrepel::geom_text_repel(data = subset(hvf_df, gene %in% top10), aes(label = gene),
-                           colour = "black", size = 2.5, max.overlaps = Inf) +
-  facet_wrap(~ model) +
-  labs(x = "Geometric mean of expression", y = "Residual variance") +
-  theme_classic()
-plot2a
-
-ggsave(filename="Module1 (Exploratory Analysis)/results/s1_variable_features.png", plot=plot2a,width = 8, height = 6, dpi = 300)
-
-#Clusterization
-#Same dims and resolution for both methods so the comparison is fair.
-#Each method gets its own graph and cluster column, so nothing is overwritten.
-#(Do not use "harmony_clusters" as a name: that column holds the lab's original clusters.)
-
-# ##Harmony
-# data <- FindNeighbors(data, reduction = "harmony", dims = 1:15,
-#                       graph.name = c("harmony_nn", "harmony_snn"))
-# data <- FindClusters(data, graph.name = "harmony_snn", resolution = 0.5,
-#                      cluster.name = "clusters_harmony")
-
-##CCA
-data <- FindNeighbors(data, reduction = "integrated.cca", dims = 1:15,
-                      graph.name = c("cca_nn", "cca_snn"))
-data <- FindClusters(data, graph.name = "cca_snn", resolution = 0.5,
-                     cluster.name = "clusters_cca")
-
-table(data$clusters_harmony)
-table(data$clusters_cca)
-
-# #UMAP/t-SNE
-# data <- RunUMAP(data, reduction = "harmony", dims = 1:15, reduction.name = "umap.harmony")
-# data <- RunUMAP(data, reduction = "integrated.cca", dims = 1:15, reduction.name = "umap.cca")
-# 
-# umap_plot<-DimPlot(data, reduction = "umap.harmony", group.by = "patient_id", shuffle = TRUE)
-# umap_plot
-# ggsave(filename="Module1 (Exploratory Analysis)/results/UMAP/UMAP.png", plot=umap_plot,width = 8, height = 6, dpi = 300)
-
-#Comparison of the two integration methods
-comp_dir <- "Module1 (Exploratory Analysis)/results/Integration_comparison"
-dir.create(comp_dir, showWarnings = FALSE, recursive = TRUE)
-
-##1. UMAPs side by side: top row coloured by patient (batch mixing), bottom row by cluster
-umap_compare <- patchwork::wrap_plots(
-  DimPlot(data, reduction = "umap.harmony", group.by = "patient_id", shuffle = TRUE) + ggtitle("Harmony - patient"),
-  DimPlot(data, reduction = "umap.cca", group.by = "patient_id", shuffle = TRUE) + ggtitle("CCA - patient"),
-  DimPlot(data, reduction = "umap.harmony", group.by = "clusters_harmony", label = TRUE) + NoLegend() + ggtitle("Harmony - clusters"),
-  DimPlot(data, reduction = "umap.cca", group.by = "clusters_cca", label = TRUE) + NoLegend() + ggtitle("CCA - clusters"),
-  ncol = 2)
-umap_compare
-ggsave(filename = file.path(comp_dir, "s1_UMAP_harmony_vs_cca.png"), plot = umap_compare, width = 14, height = 12, dpi = 300)
-
-##2. Agreement between clusterings: Adjusted Rand Index (1 = identical, ~0 = random)
-##Written in base R so no extra package is needed on Hooke.
-ari <- function(x, y) {
-  tab      <- table(x, y)
-  sum_ij   <- sum(choose(tab, 2))
-  sum_a    <- sum(choose(rowSums(tab), 2))
-  sum_b    <- sum(choose(colSums(tab), 2))
-  expected <- sum_a * sum_b / choose(sum(tab), 2)
-  (sum_ij - expected) / ((sum_a + sum_b) / 2 - expected)
-}
-ari_table <- data.frame(
-  comparison = c("Harmony vs CCA",
-                 "Harmony vs original lab clusters",
-                 "CCA vs original lab clusters"),
-  ARI = c(ari(data$clusters_harmony, data$clusters_cca),
-          ari(data$clusters_harmony, data$harmony_clusters),
-          ari(data$clusters_cca,     data$harmony_clusters)))
-ari_table
-write.csv(ari_table, file.path(comp_dir, "s1_ARI_integration_methods.csv"), row.names = FALSE)
-
-##3. Which Harmony cluster corresponds to which CCA cluster (row-normalised)
-cross <- as.data.frame(prop.table(table(harmony = data$clusters_harmony,
-                                        cca = data$clusters_cca), margin = 1))
-cross_plot <- ggplot(cross, aes(cca, harmony, fill = Freq)) +
-  geom_tile() +
-  scale_fill_gradient(low = "white", high = "darkred", name = "Fraction of\nHarmony cluster") +
-  labs(x = "CCA cluster", y = "Harmony cluster") +
-  theme_classic()
-cross_plot
-ggsave(filename = file.path(comp_dir, "s1_cluster_crosstab_harmony_vs_cca.png"), plot = cross_plot, width = 8, height = 7, dpi = 300)
-
-##4. Patient mixing per cluster: normalised Shannon entropy of patient_id
-##(1 = cells evenly spread over all patients, 0 = cluster made of a single patient).
-##Clusters close to 0 are patient-specific; compare how many each method keeps.
-patient_mixing <- function(clusters, patients, method) {
-  tab <- table(clusters, patients)
-  p   <- prop.table(tab, margin = 1)
-  ent <- apply(p, 1, function(x) { x <- x[x > 0]; -sum(x * log(x)) }) / log(ncol(tab))
-  data.frame(method = method, cluster = rownames(tab), n_cells = rowSums(tab),
-             mixing = ent, top_patient = colnames(tab)[apply(tab, 1, which.max)])
-}
-mixing <- rbind(patient_mixing(data$clusters_harmony, data$patient_id, "Harmony"),
-                patient_mixing(data$clusters_cca,     data$patient_id, "CCA"))
-mixing
-write.csv(mixing, file.path(comp_dir, "s1_patient_mixing_per_cluster.csv"), row.names = FALSE)
-
-##5. Patient composition of each cluster
-comp_plot <- function(cluster_col, title) {
-  ggplot(data@meta.data, aes(x = .data[[cluster_col]], fill = patient_id)) +
-    geom_bar(position = "fill") +
-    labs(x = "Cluster", y = "Fraction of cells", title = title) +
-    theme_classic()
-}
-composition <- patchwork::wrap_plots(comp_plot("clusters_harmony", "Harmony"),
-                                     comp_plot("clusters_cca", "CCA"),
-                                     ncol = 1, guides = "collect")
-composition
-ggsave(filename = file.path(comp_dir, "s1_patient_composition_per_cluster.png"), plot = composition, width = 10, height = 8, dpi = 300)
-
-#Save the integrated object so s2_script.R (annotation) can start from here without re-running s1.
-#It is a large file: intermediate/ is git-ignored, sync it to SurfDrive with rclone instead.
-dir.create("Module1 (Exploratory Analysis)/intermediate", showWarnings = FALSE)
-qs_save(data, "Module1 (Exploratory Analysis)/intermediate/s1_integrated_harmony_cca.qs2")
