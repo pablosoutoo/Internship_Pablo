@@ -11,6 +11,23 @@ library(sctransform)
 data<-qs_read("Inputs/External/stripped_s1_harmony_tumor_cells.qs2")
 data
 
+diag_dir <- "Module1 (Exploratory Analysis)/results/Diagnostics"
+dir.create(diag_dir, showWarnings = FALSE, recursive = TRUE)
+
+##Cell counts per patient at every filtering step, written to a table instead of hard-coded
+##in comments (the old comments disagreed: 37,407 vs 44,478 QC-passing cells).
+count_cells <- function(obj, step) {
+  n <- table(obj$patient_id)
+  data.frame(step = step, patient_id = c(names(n), "ALL"), cells = c(as.vector(n), ncol(obj)))
+}
+cell_log <- count_cells(data, "1_input")
+
+##How many patients and samples are really in the object (compare with the paper)
+pat_samp <- table(patient = data$patient_id, sample = data$sample_id)
+pat_samp
+rowSums(pat_samp > 0)   #samples per patient: if > 1, consider splitting the layers by sample_id instead of patient_id
+write.csv(as.data.frame.matrix(pat_samp), file.path(diag_dir, "s1_patient_x_sample_input.csv"))
+
 #Standard preprocessing workflow
 
 ##Calculate the mitochondrial QC metrics 
@@ -33,7 +50,7 @@ ggsave(filename="Module1 (Exploratory Analysis)/results/s1_feat_scatt_2.png", pl
 #We'll keep the cells with at leats 500 genes detected and maximal 7500(nFeatureRNA), and below a 15% percentage of mithocondrial genes (already in the paper). 
 
 # NOTE (2026-09-23): subset() is unreliable on this object. It trims meta.data
-# correctly (37,407 QC-passing cells) but leaves the RNA assay's counts matrix at
+# correctly but leaves the RNA assay's counts matrix at
 # the original 45,747 cells, so NormalizeData() fails because there is a dimension mismatch.
 # Ruled out: the ADT assay's un-joined per-sample layers (dropping ADT did not fix it),
 # a stale object (re-running subset() fresh did not fix it), and duplicated or
@@ -79,7 +96,7 @@ data <- CreateSeuratObject(counts = counts_filtered, meta.data = meta_filtered,
 rm(counts, counts_filtered, meta_filtered)
 
 
-##Sanity check: all three must agree (28,126 genes x 44,478 cells)
+##Sanity check: all three must agree (the real numbers are stored in cell_log)
 ncol(data)
 nrow(data@meta.data)
 dim(data[["RNA"]])
@@ -89,6 +106,7 @@ stopifnot(
   ncol(data[["RNA"]]) == length(keep_cells),
   identical(colnames(data), rownames(data@meta.data))
 )
+cell_log <- rbind(cell_log, count_cells(data, "2_QC_filter"))
 
 ## Mark doublets tumor–T (the object still has only one layer counts)
 cnt   <- LayerData(data, assay = "RNA", layer = "counts")
@@ -96,8 +114,33 @@ t_id  <- c("CD3D", "CD3E", "CD2", "CD8A")
 cyto  <- c("NKG7", "GZMB", "GZMA", "CCL5", "PRF1", "CST7")
 data$T_doublet <- colSums(cnt[t_id, ] > 0) >= 2 & colSums(cnt[cyto, ] > 0) >= 2
 table(data$T_doublet, data$sample_id)
-rm(cnt)
+
+##Same rule for B-cell and myeloid doublets. These are only FLAGGED, not removed:
+##first check how they spread over the clusters (QC by cluster, after the integration).
+##CD74/HLA-DR are not used on purpose: melanoma cells can express MHC-II themselves.
+b_id  <- intersect(c("MS4A1", "CD79A", "CD79B", "CD19", "BANK1"), rownames(cnt))
+my_id <- intersect(c("LYZ", "CD14", "C1QA", "C1QB", "AIF1", "TYROBP"), rownames(cnt))
+data$B_doublet       <- colSums(cnt[b_id, ]  > 0) >= 2
+data$myeloid_doublet <- colSums(cnt[my_id, ] > 0) >= 2
+table(B = data$B_doublet, myeloid = data$myeloid_doublet)
+
+##scDblFinder simulates doublets within each sample. Also only flagged here.
+##Limitation: the object holds tumour cells only, so it finds tumour-tumour doublets
+##(between states or clones); tumour-immune doublets are better caught by the rules above.
+set.seed(42)
+sce <- SingleCellExperiment::SingleCellExperiment(list(counts = cnt))
+sce <- scDblFinder::scDblFinder(sce, samples = data$sample_id, BPPARAM = BiocParallel::SerialParam())
+data$dbl_score <- sce$scDblFinder.score
+data$dbl_class <- as.character(sce$scDblFinder.class)
+table(data$dbl_class, data$sample_id)
+rm(cnt, sce)
+gc()
+
 data <- subset(data, subset = T_doublet == FALSE)   # works: object already built
+cell_log <- rbind(cell_log, count_cells(data, "3_T_doublets_removed"))
+cell_counts <- xtabs(cells ~ patient_id + step, data = cell_log)
+cell_counts
+write.csv(as.data.frame.matrix(cell_counts), file.path(diag_dir, "s1_cells_per_step.csv"))
 data[["RNA"]] <- split(data[["RNA"]], f = data$patient_id)
 stopifnot(length(unique(data$patient_id)) > 1)
 
@@ -111,6 +154,17 @@ drop <- c(grep("^(MT-|RP[SL]\\d|TR[ABDG][VJC]|IG[HKL][VJC])", rownames(data), va
 VariableFeatures(data) <- setdiff(VariableFeatures(data), drop)
 
 dim(data)
+
+##Scores to tell real states from technical artefacts (used in the QC by cluster below)
+##Dissociation stress: genes induced by tissue digestion (van den Brink et al. 2017).
+##Ambient RNA: highly abundant transcripts of OTHER cell types (plasma cells, red cells,
+##salivary gland). Low levels in many tumour cells = ambient; they are the reason why
+##IG and HTN/STATH genes had to be removed from the variable features above.
+dissoc  <- c("FOS", "FOSB", "JUN", "JUNB", "ATF3", "EGR1", "IER2", "IER3", "DUSP1", "ZFP36",
+             "NR4A1", "HSPA1A", "HSPA1B", "HSPA6", "DNAJB1")
+ambient <- c("IGKC", "IGHG1", "IGLC2", "IGHA1", "JCHAIN", "HBB", "HBA1", "HTN1", "HTN3", "STATH")
+data <- AddModuleScore(data, features = list(intersect(dissoc, rownames(data))),  name = "dissoc_score",  seed = 42)
+data <- AddModuleScore(data, features = list(intersect(ambient, rownames(data))), name = "ambient_score", seed = 42)
 
 #Identification of highly variable features
 
@@ -293,6 +347,21 @@ ggsave(filename = "Module1 (Exploratory Analysis)/results/UMAP/harmony_grid_thet
 rm(harmony_overview)
 gc()
 
+##Final Harmony run ON THE OBJECT. The grid above only kept light tables, so without this
+##step data has no "harmony" reduction, no clusters_harmony and no umap.harmony (needed by s2).
+##CHOOSE theta from harmony_grid_theta.png (2 is the Harmony default).
+harmony_theta <- 2
+set.seed(42)
+data <- IntegrateLayers(object = data, method = HarmonyIntegration,
+                        orig.reduction = "pca", new.reduction = "harmony",
+                        normalization.method = "SCT", verbose = FALSE,
+                        theta = harmony_theta, lambda = 1, max.iter.harmony = 10, sigma = 0.1)
+data <- FindNeighbors(data, reduction = "harmony", dims = 1:15,
+                      graph.name = c("harmony_nn", "harmony_snn"))
+data <- FindClusters(data, graph.name = "harmony_snn", resolution = 0.5,
+                     cluster.name = "clusters_harmony")
+data <- RunUMAP(data, reduction = "harmony", dims = 1:15, reduction.name = "umap.harmony")
+
 
 ##CCA (Seurat anchors: cell-level mutual nearest neighbours in a shared CCA space)
 ##This is the method used in the original tumour analysis (Tumor_Analysis_Code.R).
@@ -368,83 +437,108 @@ ggsave(filename = "Module1 (Exploratory Analysis)/results/CCA/cca_grid_patients.
 rm(cca_grid_clusters, cca_grid_patients)
 gc()
 
-#FindAllMarkers
-##SCTransform was run per patient, so the SCT assay holds one model per patient.
-##FindMarkers refuses that until PrepSCTFindMarkers() puts all cells on the same scale.
-##FindAllMarkers catches that error for every cluster (it only shows up in warnings()) and
-##returns an EMPTY table without a "cluster" column, which is what made group_by(cluster) fail.
-data <- PrepSCTFindMarkers(data, assay = "SCT")
-Idents(data) <- "clusters_cca"
-data.markers <- FindAllMarkers(data, assay = "SCT", only.pos = TRUE)
-stopifnot(nrow(data.markers) > 0)   # if this stops, run warnings() to see why each cluster failed
-data.markers %>%
-  group_by(cluster) %>%
-  slice_max(avg_log2FC, n = 10)
-
-
-#Cell-population annotation of the CCA clusters
-##Same idea as the Seurat PBMC tutorial (one name per cluster), but these are melanoma tumour
-##cells, so the "populations" are tumour states (melanocytic, mitotic, neural crest-like,
-##mesenchymal-like, IFN response, stress...; Pozniak et al. 2024) rather than immune cell types.
-##The label is stored as a metadata column (cell_state_cca), so clusters_cca stays untouched.
-annot_dir <- "Module1 (Exploratory Analysis)/results/Annotation"
-dir.create(annot_dir, showWarnings = FALSE, recursive = TRUE)
-
-##1. Evidence: top markers per cluster + canonical genes of each state
-top_markers <- data.markers %>% group_by(cluster) %>% slice_max(avg_log2FC, n = 10)
-write.csv(top_markers, file.path(annot_dir, "s1_top10_markers_cca.csv"), row.names = FALSE)
-
-canonical <- c("MKI67", "TOP2A",                          #cycling
-               "MITF", "PMEL", "DCT", "MLANA", "TYR",     #melanocytic
-               "SOX10", "NGFR", "AXL", "SOX9",            #neural crest-like / dedifferentiated
-               "VIM", "SERPINE1", "FN1",                  #mesenchymal
-               "VEGFA", "CA9", "NDUFA4L2",                #hypoxia
-               "CXCL10", "STAT1", "B2M", "HLA-A",         #IFN response / MHC-I
-               "CD74", "HLA-DRA",                         #MHC-II
-               "HSPA6", "HSPA1A", "CDKN1A", "GDF15")      #stress (heat shock, p53)
-canonical <- intersect(canonical, rownames(data))
-dot_cca <- DotPlot(data, features = canonical, group.by = "clusters_cca", assay = "SCT") +
-  RotatedAxis() + ggtitle("CCA clusters - canonical genes")
-dot_cca
-ggsave(file.path(annot_dir, "s1_canonical_dotplot_cca.png"), dot_cca, width = 12, height = 6, dpi = 300)
-
-##2. One name per cluster. Fill these in after looking at the dot plot and the marker table;
-##clusters you are not sure about stay "Unassigned". Two clusters may share the same name.
-cca_labels <- setNames(rep("Unassigned", nlevels(data$clusters_cca)), levels(data$clusters_cca))
-cca_labels["0"]  <- "Neural crest-like"            #SOX10 high; NCMAP, SCN7A, SCRG1, ANGPTL7
-cca_labels["1"]  <- "Melanocytic"                  #PMEL, MLANA, MITF, DCT, TYR
-cca_labels["2"]  <- "Stress (ATF4 / amino acid)"   #ASNS, TRIB3, GDF15, CDKN1A (weak markers)
-cca_labels["3"]  <- "IFN response"                 #GBP1/4, IFIT2, IFI44L, STAT1, B2M, HLA-A
-cca_labels["4"]  <- "Mesenchymal-like (invasive)"  #MMP1, MMP3, IL11, SERPINB2, SERPINE1, INHBA
-cca_labels["5"]  <- "Stress (hypoxia)"             #NDUFA4L2, VEGFA, CA9, MT3
-cca_labels["6"]  <- "Melanocytic (pigmentation)"   #TYR, MITF, DCT high; low MHC-I
-cca_labels["7"]  <- "Mesenchymal-like (TGFb/YAP)"  #FN1, TAGLN, CCN1, CCN2, DKK1
-cca_labels["8"]  <- "Mitotic (G1/S)"               #E2F2, RRM2, MCM10, CDC45, CLSPN
-cca_labels["9"]  <- "Antigen presentation (MHC-II)" #CD74, HLA-DRA; B-cell genes in ~5% of cells
-cca_labels["10"] <- "Inflammatory (NF-kB)"         #CXCL10/11, CCL2, CXCL2, SELE, HSPA6
-cca_labels["11"] <- "Mitotic (G2/M)"               #PLK1, CDC20, KIF20A, MKI67, TOP2A
-cca_labels
-
-data$cell_state_cca <- unname(cca_labels[as.character(data$clusters_cca)])
-table(data$clusters_cca, data$cell_state_cca)
-
-##3. Labelled UMAP (one final CCA UMAP, with the setting you chose from the grid)
+##Final CCA UMAP, with the setting chosen from the grid
 data <- RunUMAP(data, reduction = "integrated.cca", dims = 1:15, reduction.name = "umap.cca",
                 n.neighbors = 30L, min.dist = 0.3)
-umap_states <- DimPlot(data, reduction = "umap.cca", group.by = "cell_state_cca",
-                       label = TRUE, repel = TRUE, pt.size = 0.5) + NoLegend() +
-  ggtitle("CCA clusters - cell states")
-umap_states
-ggsave(file.path(annot_dir, "s1_UMAP_cell_states_cca.png"), umap_states, width = 8, height = 6, dpi = 300)
 
 
+#Diagnostics: are the clusters biology or technical/patient effects?
+##Marker genes and annotation are done in s2_script.R, on the object saved at the end.
+
+##1. Cluster x patient: which fraction of each cluster comes from each patient
+cl_pat <- table(cluster = data$clusters_cca, patient = data$patient_id)
+cl_pat_frac <- round(prop.table(cl_pat, 1), 3)
+cl_pat
+cl_pat_frac
+write.csv(as.data.frame.matrix(cl_pat),      file.path(diag_dir, "s1_cluster_x_patient_counts.csv"))
+write.csv(as.data.frame.matrix(cl_pat_frac), file.path(diag_dir, "s1_cluster_x_patient_frac.csv"))
+
+##Patient-specific clusters: one patient contributes more than 80% of the cells
+names(which(apply(cl_pat_frac, 1, max) > 0.8))
+
+pat_comp <- ggplot(as.data.frame(cl_pat), aes(cluster, Freq, fill = patient)) +
+  geom_col(position = "fill") +
+  labs(x = "CCA cluster", y = "Fraction of cells", fill = "patient_id") +
+  theme_classic()
+ggsave(file.path(diag_dir, "s1_cluster_patient_composition.png"), pat_comp, width = 8, height = 5, dpi = 300)
+
+##2. QC by cluster. What to look for:
+##   low-quality cells   -> low nFeature_RNA and/or high percent.mt (cluster 2?)
+##   B/myeloid doublets  -> high B_frac / myeloid_frac (cluster 9?)
+##   dissociation stress -> high dissoc_score1 (cluster 10?)
+##   ambient RNA         -> high ambient_score1 spread over many cells
+qc_cols <- c("nCount_RNA", "nFeature_RNA", "percent.mt", "dissoc_score1", "ambient_score1", "dbl_score")
+qc_by_cluster <- data@meta.data %>%
+  group_by(clusters_cca) %>%
+  summarise(n_cells = n(), across(all_of(qc_cols), median),
+            dbl_frac     = mean(dbl_class == "doublet"),
+            B_frac       = mean(B_doublet),
+            myeloid_frac = mean(myeloid_doublet))
+qc_by_cluster
+write.csv(qc_by_cluster, file.path(diag_dir, "s1_qc_by_cluster.csv"), row.names = FALSE)
+
+qc_vln <- VlnPlot(data, features = qc_cols, group.by = "clusters_cca", pt.size = 0, ncol = 2)
+ggsave(file.path(diag_dir, "s1_qc_by_cluster.png"), qc_vln, width = 12, height = 10, dpi = 300)
+rm(qc_vln)
+
+##3. Integration metrics
+##iLISI = effective number of patients in the neighbourhood of each cell (1 = a single patient,
+##maximum = number of patients). Computed on the corrected embeddings (not on the UMAP).
+##Careful: tumour cells are partly patient-specific for real (different clones), so the
+##highest iLISI is not automatically the best one; too much mixing can mean over-correction.
+emb <- c(PCA = "pca", Harmony = "harmony", CCA = "integrated.cca")
+ilisi <- do.call(rbind, lapply(names(emb), function(m) {
+  data.frame(method  = m,
+             cluster = data$clusters_cca,
+             iLISI   = lisi::compute_lisi(Embeddings(data, emb[[m]])[, 1:15],
+                                          data@meta.data, "patient_id")$patient_id)
+}))
+ilisi$method <- factor(ilisi$method, levels = names(emb))
+ilisi %>% group_by(method) %>% summarise(median_iLISI = median(iLISI))
+ilisi_by_cluster <- ilisi %>% group_by(method, cluster) %>% summarise(median_iLISI = median(iLISI), .groups = "drop")
+write.csv(ilisi_by_cluster, file.path(diag_dir, "s1_iLISI_by_cluster.csv"), row.names = FALSE)
+
+ilisi_plot <- ggplot(ilisi, aes(method, iLISI)) +
+  geom_boxplot(outlier.size = 0.1) +
+  labs(x = NULL, y = "iLISI (patient_id)") +
+  theme_classic()
+ggsave(file.path(diag_dir, "s1_iLISI_methods.png"), ilisi_plot, width = 5, height = 5, dpi = 300)
+rm(ilisi)
+
+##ARI: how similar two clusterings are (1 = identical, 0 = as similar as by chance)
+mclust::adjustedRandIndex(data$clusters_harmony, data$clusters_cca)
+
+##ARI of every theta of the Harmony grid against CCA (uses the saved grid table, no re-run)
+if (!exists("harmony_results")) harmony_results <- qs_read(file.path(intermediate_dir, "s1_harmony_grid_results.qs2"))
+cca_cl <-setNames(as.character(data$clusters_cca), colnames(data))
+ari_theta <- harmony_results %>%
+  group_by(theta) %>%
+  summarise(ARI_vs_CCA = mclust::adjustedRandIndex(cluster, cca_cl[cell]))
+ari_theta
+write.csv(ari_theta, file.path(diag_dir, "s1_ARI_harmony_theta_vs_cca.csv"), row.names = FALSE)
+
+##Cluster correspondence Harmony vs CCA
+write.csv(as.data.frame.matrix(table(Harmony = data$clusters_harmony, CCA = data$clusters_cca)),
+          file.path(diag_dir, "s1_clusters_harmony_vs_cca.csv"))
+
+##4. UMAP faceted by patient: all cells in grey, the cells of that patient coloured by cluster
+u <- Embeddings(data, reduction = "umap.cca")
+colnames(u) <- c("UMAP_1", "UMAP_2")
+u <- cbind(as.data.frame(u), data@meta.data[, c("patient_id", "clusters_cca")])
+umap_by_patient <- ggplot(u, aes(UMAP_1, UMAP_2)) +
+  geom_point(data = u[, c("UMAP_1", "UMAP_2")], colour = "grey85", size = 0.05, shape = 16) +
+  geom_point(aes(colour = clusters_cca), size = 0.1, shape = 16) +
+  facet_wrap(~ patient_id) +
+  labs(colour = "CCA cluster") +
+  guides(colour = guide_legend(override.aes = list(size = 3))) +
+  theme_classic()
+ggsave(file.path(diag_dir, "s1_UMAP_cca_by_patient.png"), umap_by_patient, width = 14, height = 10, dpi = 200)
+rm(u, umap_by_patient)
+gc()
 
 
-
-
-
-
-
-
-
-
+#Save the integrated object for s2_script.R
+##Large file (several GB): it is in .gitignore, sync it to SurfDrive instead of git.
+stopifnot(all(c("clusters_harmony", "clusters_cca") %in% colnames(data@meta.data)),
+          all(c("harmony", "integrated.cca", "umap.harmony", "umap.cca") %in% Reductions(data)))
+qs_save(data, file.path(intermediate_dir, "s1_integrated_harmony_cca.qs2"))

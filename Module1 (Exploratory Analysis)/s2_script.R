@@ -3,7 +3,8 @@ set.seed(42)
 #Input : the integrated object saved at the end of s1_script.R
 #Goal  : give every cluster a biological label, using
 #        (1) published melanoma tumour-state signatures (scored per cell, averaged per cluster)
-#        (2) canonical marker genes and data-driven markers (FindAllMarkers)
+#        (2) canonical marker genes and data-driven markers (AUC-ranked and conserved across patients)
+#        and consolidate the clusters into 7-8 meta-states for the figures
 #The automatic label is a PROPOSAL: check the heatmap, dot plot and marker tables,
 #and correct it in the "Manual review" section before using the labels downstream.
 
@@ -76,8 +77,23 @@ ann_cca
 #3. Manual review
 ##Look at the heatmap, the dot plot and the marker tables below, then correct labels here.
 ##Example: manual_harmony <- c(`7` = "Mitotic", `11` = "Patient specific (P3)")
+##The CCA labels are the ones first set by hand in s1_script.R (canonical dot plot + top markers).
 manual_harmony <- character(0)
-manual_cca     <- character(0)
+manual_cca     <- c(`0`  = "Neural crest-like",             #SOX10 high; NCMAP, SCN7A, SCRG1, ANGPTL7
+                    `1`  = "Melanocytic",                   #PMEL, MLANA, MITF, DCT, TYR
+                    `2`  = "Stress (ATF4 / amino acid)",    #ASNS, TRIB3, GDF15, CDKN1A (weak markers)
+                    `3`  = "IFN response",                  #GBP1/4, IFIT2, IFI44L, STAT1, B2M, HLA-A
+                    `4`  = "Mesenchymal-like (invasive)",   #MMP1, MMP3, IL11, SERPINB2, SERPINE1, INHBA
+                    `5`  = "Stress (hypoxia)",              #NDUFA4L2, VEGFA, CA9, MT3
+                    `6`  = "Melanocytic (pigmentation)",    #TYR, MITF, DCT high; low MHC-I
+                    `7`  = "Mesenchymal-like (TGFb/YAP)",   #FN1, TAGLN, CCN1, CCN2, DKK1
+                    `8`  = "Mitotic (G1/S)",                #E2F2, RRM2, MCM10, CDC45, CLSPN
+                    `9`  = "Antigen presentation (MHC-II)", #CD74, HLA-DRA; B-cell genes in ~5% of cells
+                    `10` = "Inflammatory (NF-kB)",          #CXCL10/11, CCL2, CXCL2, SELE, HSPA6
+                    `11` = "Mitotic (G2/M)")                #PLK1, CDC20, KIF20A, MKI67, TOP2A
+manual_cca <- manual_cca[names(manual_cca) %in% ann_cca$cluster]
+ann_harmony$auto_label <- ann_harmony$label   #keep the signature-based label to compare
+ann_cca$auto_label     <- ann_cca$label
 ann_harmony$label[match(names(manual_harmony), ann_harmony$cluster)] <- manual_harmony
 ann_cca$label[match(names(manual_cca), ann_cca$cluster)] <- manual_cca
 
@@ -131,19 +147,58 @@ dot_c
 ggsave(file.path(res_dir, "s2_canonical_dotplot_harmony.png"), dot_h, width = 12, height = 6, dpi = 300)
 ggsave(file.path(res_dir, "s2_canonical_dotplot_cca.png"),     dot_c, width = 12, height = 6, dpi = 300)
 
-##4c. Data-driven markers (top 20 per cluster). PrepSCTFindMarkers is needed because there is one SCT
-##model per patient. max.cells.per.ident keeps the run time reasonable on Hooke.
+##4c. Data-driven markers (top 20 per cluster), ranked by AUC instead of avg_log2FC.
+##Ranking by fold change alone pushed up genes seen in very few cells (e.g. NCMAP in 1.8% of
+##cluster 0 in s1_top10_markers_cca.csv). AUC rewards genes that actually separate the cluster.
+##PrepSCTFindMarkers is needed because there is one SCT model per patient (without it,
+##FindAllMarkers fails silently for every cluster and returns an EMPTY table).
+##presto (immunogenomics/presto) computes the Wilcoxon test + AUC for all clusters in seconds.
+##Note: presto's logFC is a difference of means of log-normalised data (natural log), not log2.
 data <- PrepSCTFindMarkers(data)
-Idents(data) <- "clusters_harmony"
-mk_h <- FindAllMarkers(data, assay = "SCT", only.pos = TRUE, min.pct = 0.25,
-                       logfc.threshold = 0.5, max.cells.per.ident = 1000)
+expr <- GetAssayData(data, assay = "SCT", layer = "data")
+
+auc_markers <- function(cluster_col) {
+  presto::wilcoxauc(expr, as.character(data@meta.data[[cluster_col]])) %>%
+    filter(padj < 0.05, logFC > 0.25, pct_in >= 25, auc >= 0.6) %>%
+    mutate(pct_diff = pct_in - pct_out) %>%
+    rename(cluster = group, gene = feature) %>%
+    group_by(cluster) %>%
+    arrange(desc(auc), .by_group = TRUE)
+}
+mk_h <- auc_markers("clusters_harmony")
+mk_c <- auc_markers("clusters_cca")
+rm(expr)
+stopifnot(nrow(mk_h) > 0, nrow(mk_c) > 0)
+mk_c %>% count(cluster)   #clusters with few or no markers passing the filters are suspicious
+write.csv(mk_h %>% slice_head(n = 20), file.path(res_dir, "s2_top20_markers_auc_harmony.csv"), row.names = FALSE)
+write.csv(mk_c %>% slice_head(n = 20), file.path(res_dir, "s2_top20_markers_auc_cca.csv"),     row.names = FALSE)
+
+##4d. Markers conserved across patients (CCA clusters). A gene is kept only if it is up in the
+##cluster in EVERY patient that has cells there (min_log2FC > 0); n_patients = 1 means the
+##cluster is patient-specific. Needs the "metap" package. Patients with < 3 cells in a
+##cluster are skipped with a warning. If you get "multiple models with unequal library sizes",
+##add recorrect_umi = FALSE.
 Idents(data) <- "clusters_cca"
-mk_c <- FindAllMarkers(data, assay = "SCT", only.pos = TRUE, min.pct = 0.25,
-                       logfc.threshold = 0.5, max.cells.per.ident = 1000)
-write.csv(mk_h %>% group_by(cluster) %>% slice_max(avg_log2FC, n = 20),
-          file.path(res_dir, "s2_top20_markers_harmony.csv"), row.names = FALSE)
-write.csv(mk_c %>% group_by(cluster) %>% slice_max(avg_log2FC, n = 20),
-          file.path(res_dir, "s2_top20_markers_cca.csv"), row.names = FALSE)
+conserved <- lapply(levels(data$clusters_cca), function(cl) {
+  m <- tryCatch(FindConservedMarkers(data, ident.1 = cl, grouping.var = "patient_id",
+                                     assay = "SCT", only.pos = TRUE, min.pct = 0.25,
+                                     logfc.threshold = 0.25, max.cells.per.ident = 500,
+                                     verbose = FALSE),
+                error = function(e) { message("cluster ", cl, ": ", conditionMessage(e)); NULL })
+  if (is.null(m) || nrow(m) == 0) return(NULL)
+  fc_cols <- grep("_avg_log2FC$", colnames(m), value = TRUE)
+  m$min_log2FC <- apply(m[, fc_cols, drop = FALSE], 1, min)
+  m$n_patients <- length(fc_cols)
+  data.frame(cluster = cl, gene = rownames(m),
+             m[, intersect(c("min_log2FC", "n_patients", "max_pval", "minimump_p_val"), colnames(m))],
+             row.names = NULL) %>%
+    filter(min_log2FC > 0) %>%
+    arrange(desc(min_log2FC)) %>%
+    head(20)
+})
+conserved <- do.call(rbind, conserved)
+conserved
+write.csv(conserved, file.path(res_dir, "s2_top20_conserved_markers_cca.csv"), row.names = FALSE)
 
 #5. Labelled UMAPs
 umap_h <- DimPlot(data, reduction = "umap.harmony", group.by = "cluster_label_harmony",
@@ -161,8 +216,89 @@ label_agreement
 write.csv(as.data.frame.matrix(table(Harmony = data$state_harmony, CCA = data$state_cca)),
           file.path(res_dir, "s2_label_agreement_harmony_vs_cca.csv"))
 
-#7. Save (large files: intermediate/ is git-ignored, sync to SurfDrive)
+#7. Meta-states: consolidate the 12 CCA clusters into 7-8 tumour states (Pozniak et al. 2024)
+##PROVISIONAL. Decide with: the signature heatmap and auto_label (sections 2 and 4a), the AUC and
+##conserved markers (4c, 4d) and the QC by cluster from s1 (results/Diagnostics/s1_qc_by_cluster.csv).
+##   cluster 2  -> "Low quality" if nFeature is low / percent.mt high
+##   cluster 9  -> "Excluded (doublets)" if B_frac / myeloid_frac is high
+##   cluster 10 -> "Excluded (dissociation)" if dissoc_score1 is high
+##Clusters labelled "Excluded..." or "Low quality" are left out of the meeting figures.
+meta_map <- c(`1`  = "Melanocytic",          `6`  = "Melanocytic",
+              `0`  = "Neural crest-like",
+              `4`  = "Mesenchymal-like",     `7`  = "Mesenchymal-like",
+              `8`  = "Mitotic",              `11` = "Mitotic",
+              `3`  = "IFN response",
+              `9`  = "Antigen presentation",
+              `5`  = "Stress (hypoxia)",
+              `2`  = "Stress (ATF4)",
+              `10` = "Inflammatory (NF-kB)")
+stopifnot(all(levels(data$clusters_cca) %in% names(meta_map)))
+data$meta_state <- factor(unname(meta_map[as.character(data$clusters_cca)]),
+                          levels = unique(meta_map))
+table(data$clusters_cca, data$meta_state)
+
+##Does the manual meta-state agree with the automatic Pozniak label of each cluster?
+meta_check <- merge(ann_cca[, c("cluster", "n_cells", "auto_label", "second", "margin", "label")],
+                    data.frame(cluster = names(meta_map), meta_state = unname(meta_map)), by = "cluster")
+meta_check[order(as.numeric(meta_check$cluster)), ]
+write.csv(meta_check, file.path(res_dir, "s2_meta_states_cca.csv"), row.names = FALSE)
+
+
+#8. Figures for the meeting (UMAP, reduced dot plot, composition per patient)
+##One fixed palette, so the same state has the same colour in every figure.
+fig_dir <- "Module1 (Exploratory Analysis)/results/Figures_meeting"
+dir.create(fig_dir, showWarnings = FALSE, recursive = TRUE)
+
+##The excluded cells are filtered inside each plot (no copy of the multi-GB object).
+fig_states <- grep("^(Excluded|Low quality)", levels(data$meta_state), value = TRUE, invert = TRUE)
+fig_cells  <- colnames(data)[data$meta_state %in% fig_states]
+pal <- setNames(scales::hue_pal()(length(fig_states)), fig_states)
+
+##A. Final UMAP coloured by meta-state
+figA <- DimPlot(data, reduction = "umap.cca", group.by = "meta_state", cells = fig_cells, cols = pal,
+                label = TRUE, repel = TRUE, label.size = 4) +
+  NoLegend() + ggtitle(NULL)
+
+##B. Reduced dot plot: 2-3 genes per meta-state, in the same order as the states
+dot_genes <- c("PMEL", "MLANA", "MITF",         #melanocytic
+               "SOX10", "NGFR",                 #neural crest-like
+               "SERPINE1", "FN1",               #mesenchymal-like
+               "MKI67", "TOP2A",                #mitotic
+               "CXCL10", "STAT1",               #IFN response
+               "CD74", "HLA-DRA",               #antigen presentation
+               "VEGFA", "CA9",                  #hypoxia
+               "ASNS", "TRIB3",                 #ATF4 stress
+               "CXCL2", "HSPA6")                #NF-kB / inflammatory
+Idents(data) <- "meta_state"
+figB <- DotPlot(data, features = intersect(dot_genes, rownames(data)),
+                idents = fig_states, assay = "SCT") +
+  RotatedAxis() + labs(x = NULL, y = NULL)
+
+##C. Composition per patient
+comp <- as.data.frame(table(patient = data$patient_id[data$meta_state %in% fig_states],
+                            state   = droplevels(data$meta_state[data$meta_state %in% fig_states])))
+figC <- ggplot(comp, aes(patient, Freq, fill = state)) +
+  geom_col(position = "fill") +
+  scale_fill_manual(values = pal) +
+  labs(x = NULL, y = "Fraction of tumour cells", fill = NULL) +
+  theme_classic() + RotatedAxis()
+
+figA
+figB
+figC
+figs <- list(A_UMAP_meta_states    = list(figA, 7, 6),
+             B_dotplot_meta_states = list(figB, 10, 5),
+             C_composition_patient = list(figC, 8, 5))
+for (f in names(figs)) {
+  ggsave(file.path(fig_dir, paste0(f, ".pdf")), figs[[f]][[1]], width = figs[[f]][[2]], height = figs[[f]][[3]])
+  ggsave(file.path(fig_dir, paste0(f, ".png")), figs[[f]][[1]], width = figs[[f]][[2]], height = figs[[f]][[3]], dpi = 300)
+}
+rm(figs)
+gc()
+
+
+#9. Save (large file: s2_annotated.qs2 is in .gitignore, sync it to SurfDrive)
 write.csv(data@meta.data[, c("patient_id", "sample_id", "clusters_harmony", "state_harmony",
-                             "clusters_cca", "state_cca")],
+                             "clusters_cca", "state_cca", "meta_state")],
           "Module1 (Exploratory Analysis)/intermediate/s2_cell_annotations.csv")
 qs_save(data, "Module1 (Exploratory Analysis)/intermediate/s2_annotated.qs2")

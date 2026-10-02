@@ -4,3 +4,7 @@
 .Ruserdata
 Inputs/External/*
 !Inputs/External/.gitkeep
+
+# Large Seurat objects (several GB): keep them on SurfDrive / Hooke, never in git
+Module1 (Exploratory Analysis)/intermediate/s1_integrated_harmony_cca.qs2
+Module1 (Exploratory Analysis)/intermediate/s2_annotated.qs2
