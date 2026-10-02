@@ -286,8 +286,8 @@ harmony_overview <- patchwork::wrap_plots(
   plot_grid_overview(harmony_results, ~ theta, "patient_id", "Patients"),
   ncol = 1) +
   patchwork::plot_annotation(
-    title    = "Harmony: efecto de theta",
-    subtitle = paste0("Fijos: lambda = ", harmony_grid$lambda[1], " | sigma = ", harmony_grid$sigma[1], " | max_iter = ", harmony_grid$max_iter[1]))
+    title    = "Harmony: theta effect",
+    subtitle = paste0("Fixed: lambda = ", harmony_grid$lambda[1], " | sigma = ", harmony_grid$sigma[1], " | max_iter = ", harmony_grid$max_iter[1]))
 ggsave(filename = "Module1 (Exploratory Analysis)/results/UMAP/harmony_grid_theta.png",
        plot = harmony_overview, width = 4 * nrow(harmony_grid), height = 9, dpi = 200)
 rm(harmony_overview)
@@ -342,7 +342,7 @@ for (i in 1:nrow(cca_grid)) {
 cca_results <- do.call(rbind, cca_results)
 
 #Save the table so the figures can be redone without re-running the UMAPs:
-#cca_results <- qs_read(file.path(intermediate_dir, "s1_cca_grid_results.qs2"))
+cca_results <- qs_read(file.path(intermediate_dir, "s1_cca_grid_results.qs2"))
 qs_save(cca_results, file.path(intermediate_dir, "s1_cca_grid_results.qs2"))
 
 #One PNG per run
@@ -402,6 +402,10 @@ canonical <- c("MKI67", "TOP2A",                          #cycling
                "CXCL10", "STAT1", "B2M", "HLA-A",         #IFN response / MHC-I
                "CD74", "HLA-DRA",                         #MHC-II
                "HSPA6", "HSPA1A", "CDKN1A", "GDF15")      #stress (heat shock, p53)
+
+
+Tumor_signatures<-read.csv("Inputs/External/Tumor_Signatures.csv", header=TRUE)
+
 canonical <- intersect(canonical, rownames(data))
 dot_cca <- DotPlot(data, features = canonical, group.by = "clusters_cca", assay = "SCT") +
   RotatedAxis() + ggtitle("CCA clusters - canonical genes")
@@ -440,7 +444,22 @@ ggsave(file.path(annot_dir, "s1_UMAP_cell_states_cca.png"), umap_states, width =
 
 
 
+#Final Harmony run on the main object (the grid only returned light tables, so `data`
+#has no harmony reduction yet). Pick the theta you want to keep after looking at the grid.
+final_theta <- 2    # Harmony's default; change it if you prefer another value from the grid
 
+data <- IntegrateLayers(object = data, method = HarmonyIntegration,
+                        orig.reduction = "pca", new.reduction = "harmony",
+                        normalization.method = "SCT", verbose = FALSE,
+                        theta = final_theta, lambda = 1, max.iter.harmony = 10, sigma = 0.1)
+data <- FindNeighbors(data, reduction = "harmony", dims = 1:15,
+                      graph.name = c("harmony_nn", "harmony_snn"))
+data <- FindClusters(data, graph.name = "harmony_snn", resolution = 0.5,
+                     cluster.name = "clusters_harmony")
+data <- RunUMAP(data, reduction = "harmony", dims = 1:15, reduction.name = "umap.harmony")
+
+#Save the integrated object that s2_script.R reads (intermediate/ is git-ignored)
+qs_save(data, "Module1 (Exploratory Analysis)/intermediate/s1_integrated_harmony_cca.qs2")
 
 
 
