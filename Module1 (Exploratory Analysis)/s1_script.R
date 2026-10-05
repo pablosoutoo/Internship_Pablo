@@ -408,6 +408,10 @@ canonical <- c("MKI67", "TOP2A",                          #cycling
 
 
 Tumor_signatures<-read.csv("Inputs/External/Tumor_Signatures.csv", header=TRUE)
+ 
+
+top_markers_function<- top_markers %>% left_join(Tumor_signatures %>% select(gene,Cell_state ), by = "gene")
+                         
 
 canonical <- intersect(canonical, rownames(data))
 dot_cca <- DotPlot(data, features = canonical, group.by = "clusters_cca", assay = "SCT") +
@@ -445,14 +449,19 @@ umap_states
 ggsave(file.path(annot_dir, "s1_UMAP_cell_states_cca.png"), umap_states, width = 8, height = 6, dpi = 300)
 
 
+
+
+
 #AUCELL
 library(GEOquery)
+library(AUCell)
 library(data.table)
 
+exprMatrix<- LayerData(data, assay = "RNA", layer = "counts")
+genes <- top_markers$gene
+GeneSets<- GeneSet(genes, setName="geneSet1")
 
-
-
-
-
+geneSets <- subsetGeneSets(geneSets, rownames(exprMatrix)) 
+cbind(nGenes(geneSets)
 
 
