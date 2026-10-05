@@ -4,4 +4,7 @@
 .Ruserdata
 Inputs/External/*
 !Inputs/External/.gitkeep
+*.RData
+*.rda
+Module1 (Exploratory Analysis)/intermediate/*.qs2
 **/intermediate/

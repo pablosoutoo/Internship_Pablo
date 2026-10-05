@@ -375,7 +375,7 @@ gc()
 ##returns an EMPTY table without a "cluster" column, which is what made group_by(cluster) fail.
 data <- PrepSCTFindMarkers(data, assay = "SCT")
 Idents(data) <- "clusters_cca"
-data.markers <- FindAllMarkers(data, assay = "SCT", only.pos = TRUE)
+data.markers <- FindAllMarkers(data, assay = "SCT", only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.2)
 stopifnot(nrow(data.markers) > 0)   # if this stops, run warnings() to see why each cluster failed
 data.markers %>%
   group_by(cluster) %>%
@@ -391,7 +391,10 @@ annot_dir <- "Module1 (Exploratory Analysis)/results/Annotation"
 dir.create(annot_dir, showWarnings = FALSE, recursive = TRUE)
 
 ##1. Evidence: top markers per cluster + canonical genes of each state
-top_markers <- data.markers %>% group_by(cluster) %>% slice_max(avg_log2FC, n = 10)
+top_markers <- data.markers %>%
+  filter(p_val_adj < 0.05) %>%
+  group_by(cluster) %>%
+  slice_max(avg_log2FC, n = 10)
 write.csv(top_markers, file.path(annot_dir, "s1_top10_markers_cca.csv"), row.names = FALSE)
 
 canonical <- c("MKI67", "TOP2A",                          #cycling
@@ -442,24 +445,10 @@ umap_states
 ggsave(file.path(annot_dir, "s1_UMAP_cell_states_cca.png"), umap_states, width = 8, height = 6, dpi = 300)
 
 
+#AUCELL
+library(GEOquery)
+library(data.table)
 
-
-#Final Harmony run on the main object (the grid only returned light tables, so `data`
-#has no harmony reduction yet). Pick the theta you want to keep after looking at the grid.
-final_theta <- 2    # Harmony's default; change it if you prefer another value from the grid
-
-data <- IntegrateLayers(object = data, method = HarmonyIntegration,
-                        orig.reduction = "pca", new.reduction = "harmony",
-                        normalization.method = "SCT", verbose = FALSE,
-                        theta = final_theta, lambda = 1, max.iter.harmony = 10, sigma = 0.1)
-data <- FindNeighbors(data, reduction = "harmony", dims = 1:15,
-                      graph.name = c("harmony_nn", "harmony_snn"))
-data <- FindClusters(data, graph.name = "harmony_snn", resolution = 0.5,
-                     cluster.name = "clusters_harmony")
-data <- RunUMAP(data, reduction = "harmony", dims = 1:15, reduction.name = "umap.harmony")
-
-#Save the integrated object that s2_script.R reads (intermediate/ is git-ignored)
-qs_save(data, "Module1 (Exploratory Analysis)/intermediate/s1_integrated_harmony_cca.qs2")
 
 
 
