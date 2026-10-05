@@ -407,11 +407,18 @@ canonical <- c("MKI67", "TOP2A",                          #cycling
                "HSPA6", "HSPA1A", "CDKN1A", "GDF15")      #stress (heat shock, p53)
 
 
-Tumor_signatures<-read.csv("Inputs/External/Tumor_Signatures.csv", header=TRUE)
+Tumor_signatures<-read.csv("Inputs/External/Tumor_Signatures.csv", header=TRUE, row.names = 1)
  
 
-top_markers_function<- top_markers %>% left_join(Tumor_signatures %>% select(gene,Cell_state ), by = "gene")
-                         
+gene_states <- Tumor_signatures %>%
+  distinct(gene, Library, Cell_state) %>%
+  group_by(gene) %>%
+  summarise(Cell_state = paste(paste0(Cell_state, " (", Library, ")"), collapse = "; "),
+            .groups = "drop")
+
+top_markers_annot <- top_markers %>%
+  ungroup() %>%
+  left_join(gene_states, by = "gene")                        
 
 canonical <- intersect(canonical, rownames(data))
 dot_cca <- DotPlot(data, features = canonical, group.by = "clusters_cca", assay = "SCT") +
