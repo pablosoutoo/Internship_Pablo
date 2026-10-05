@@ -4,3 +4,4 @@
 .Ruserdata
 Inputs/External/*
 !Inputs/External/.gitkeep
+**/intermediate/
