@@ -375,7 +375,7 @@ gc()
 ##returns an EMPTY table without a "cluster" column, which is what made group_by(cluster) fail.
 data <- PrepSCTFindMarkers(data, assay = "SCT")
 Idents(data) <- "clusters_cca"
-data.markers <- FindAllMarkers(data, assay = "SCT", only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.2)
+data.markers <- FindAllMarkers(data, assay = "SCT", only.pos = FALSE, min.pct = 0.25, logfc.threshold = 0.2)
 stopifnot(nrow(data.markers) > 0)   # if this stops, run warnings() to see why each cluster failed
 data.markers %>%
   group_by(cluster) %>%
@@ -393,9 +393,10 @@ dir.create(annot_dir, showWarnings = FALSE, recursive = TRUE)
 ##1. Evidence: top markers per cluster + canonical genes of each state
 top_markers <- data.markers %>%
   filter(p_val_adj < 0.05) %>%
-  group_by(cluster) %>%
-  slice_max(avg_log2FC, n = 10)
-write.csv(top_markers, file.path(annot_dir, "s1_top10_markers_cca.csv"), row.names = FALSE)
+  mutate(direction = ifelse(avg_log2FC > 0, "up", "down")) %>%
+  group_by(cluster, direction) %>%
+  slice_max(abs(avg_log2FC), n = 10) %>%
+  ungroup()
 
 canonical <- c("MKI67", "TOP2A",                          #cycling
                "MITF", "PMEL", "DCT", "MLANA", "TYR",     #melanocytic
@@ -418,7 +419,10 @@ gene_states <- Tumor_signatures %>%
 
 top_markers_annot <- top_markers %>%
   ungroup() %>%
-  left_join(gene_states, by = "gene")                        
+  left_join(gene_states, by = "gene")    
+
+write.csv(top_markers_annot, file.path(annot_dir, "s1_top10_markers_cca.csv"), row.names = FALSE)
+
 
 canonical <- intersect(canonical, rownames(data))
 dot_cca <- DotPlot(data, features = canonical, group.by = "clusters_cca", assay = "SCT") +
