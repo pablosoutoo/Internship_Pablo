@@ -392,10 +392,11 @@ dir.create(annot_dir, showWarnings = FALSE, recursive = TRUE)
 
 ##1. Evidence: top markers per cluster + canonical genes of each state
 top_markers <- data.markers %>%
-  filter(p_val_adj < 0.05) %>%
-  mutate(direction = ifelse(avg_log2FC > 0, "up", "down")) %>%
-  group_by(cluster, direction) %>%
-  slice_max(abs(avg_log2FC), n = 10) %>%
+  filter(p_val_adj < 0.05, avg_log2FC > 0) %>%
+  mutate(delta_pct = pct.1 - pct.2) %>%
+  filter(pct.1 >= 0.5, delta_pct >= 0.3) %>%
+  group_by(cluster) %>%
+  slice_max(avg_log2FC * delta_pct, n = 10) %>%
   ungroup()
 
 canonical <- c("MKI67", "TOP2A",                          #cycling
