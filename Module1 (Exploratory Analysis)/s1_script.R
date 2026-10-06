@@ -506,13 +506,13 @@ colnames(auc_mat) <- make.names(colnames(auc_mat))
 data <- AddMetaData(data, as.data.frame(auc_mat))
 
 coloured_umap <- FeaturePlot(data, features = "Tsoi.Melanocytic", reduction = "umap.cca")   # UMAP coloreado por AUC
-ggsave("Module1 (Exploratory Analysis)/results/Annotation/coloured_umap_AUC.png", width = 10, height = 5, dpi = 300)
+ggsave("Module1 (Exploratory Analysis)/results/Annotation/coloured_umap_AUC.png", plot =coloured_umap, width = 10, height = 5, dpi = 300)
 
 
 mean_auc <- aggregate(as.data.frame(auc_mat), list(cluster = data$clusters_cca), mean)
 rownames(mean_auc) <- mean_auc$cluster
 heatmap <- pheatmap::pheatmap(scale(as.matrix(mean_auc[, -1])))   # clusters × firmas
-ggsave("Module1 (Exploratory Analysis)/results/Annotation/heatmap_signs_clus.png",width = 10, height = 5, dpi = 300)
+ggsave("Module1 (Exploratory Analysis)/results/Annotation/heatmap_signs_clus.png", plot = heatmap, width = 10, height = 5, dpi = 300)
 
 #Save session information
 Info_script <-sessionInfo()
