@@ -306,6 +306,8 @@ data <- FindNeighbors(data, reduction = "integrated.cca", dims = 1:15,
 data <- FindClusters(data, graph.name = "cca_snn", resolution = 0.5,
                      cluster.name = "clusters_cca")
 
+qs_save(data, "Module1 (Exploratory Analysis)/intermediate/s1_data_cca.qs2")
+
 cca_integration <-function(data, n_neighbors, minimum_distance){
   set.seed(42)
   data <- RunUMAP(data, reduction = "integrated.cca", dims = 1:15, reduction.name = "umap.ccaintegration", n.neighbors =n_neighbors, min.dist = minimum_distance)
@@ -381,6 +383,13 @@ data.markers %>%
   group_by(cluster) %>%
   slice_max(avg_log2FC, n = 10)
 
+tab <- table(data$clusters_cca, data$patient_id)
+round(prop.table(tab, 1), 2)          # composición de cada cluster
+round(prop.table(table(data$patient_id)), 2)   # composición global, para comparar
+tab
+
+round(prop.table(tab, 2), 2)                                   # % de cada paciente en cada cluster
+round(sweep(prop.table(tab, 1), 2, prop.table(table(data$patient_id)), "/"), 2)  # enriquecimiento
 
 #Cell-population annotation of the CCA clusters
 ##Same idea as the Seurat PBMC tutorial (one name per cluster), but these are melanoma tumour
@@ -392,11 +401,11 @@ dir.create(annot_dir, showWarnings = FALSE, recursive = TRUE)
 
 ##1. Evidence: top markers per cluster + canonical genes of each state
 top_markers <- data.markers %>%
-  filter(p_val_adj < 0.05, avg_log2FC > 0) %>%
-  mutate(delta_pct = pct.1 - pct.2) %>%
-  filter(pct.1 >= 0.5, delta_pct >= 0.3) %>%
+  filter(p_val_adj < 0.05, avg_log2FC > 0.5) %>%
+  mutate(delta_pct = pct.1 - pct.2,
+         strict = pct.1 >= 0.5 & delta_pct >= 0.3) %>%
   group_by(cluster) %>%
-  slice_max(avg_log2FC * delta_pct, n = 10) %>%
+  slice_max(avg_log2FC * delta_pct, n = 10, with_ties = FALSE) %>%
   ungroup()
 
 canonical <- c("MKI67", "TOP2A",                          #cycling
@@ -469,11 +478,44 @@ library(GEOquery)
 library(AUCell)
 library(data.table)
 
-exprMatrix<- LayerData(data, assay = "RNA", layer = "counts")
-genes <- top_markers$gene
-GeneSets<- GeneSet(genes, setName="geneSet1")
+rna <- JoinLayers(data[["RNA"]])
+exprMatrix <- LayerData(rna, layer = "counts")
 
-geneSets <- subsetGeneSets(geneSets, rownames(exprMatrix)) 
-cbind(nGenes(geneSets)
+#Gene Sets
+##Before using the CSV, two filters
+##Karras and Pozniak signatures are identical
+##Remove Patient_specific A/B and Mitochondrial(low quality) -> They are not biological states
+sig <- read.csv("Inputs/External/Tumor_Signatures.csv", row.names = 1) |>
+  dplyr::filter(Library != "Pozniak", !grepl("Patient_specific|low_quality", Cell_state))
+gs_list <- split(sig$gene, paste(sig$Library, sig$Cell_state))
+gs_list <- lapply(gs_list, function(g) intersect(unique(g), rownames(exprMatrix)))
+gs_list <- gs_list[lengths(gs_list) >= 10]
 
 
+#Rankings and AUC
+set.seed(42)
+cells_rankings <- AUCell_buildRankings(exprMatrix, plotStats = TRUE)
+cells_AUC <- AUCell_calcAUC(gs_list, cells_rankings,
+                            aucMaxRank = ceiling(0.05 * nrow(cells_rankings)))
+qs_save(cells_AUC, file.path(intermediate_dir, "s1_cells_AUC.qs2"))
+
+
+#Take a look at the results
+auc_mat <- t(getAUC(cells_AUC))
+colnames(auc_mat) <- make.names(colnames(auc_mat))
+data <- AddMetaData(data, as.data.frame(auc_mat))
+
+coloured_umap <- FeaturePlot(data, features = "Tsoi.Melanocytic", reduction = "umap.cca")   # UMAP coloreado por AUC
+ggsave("Module1 (Exploratory Analysis)/results/Annotation/coloured_umap_AUC.png", width = 10, height = 5, dpi = 300)
+
+
+mean_auc <- aggregate(as.data.frame(auc_mat), list(cluster = data$clusters_cca), mean)
+rownames(mean_auc) <- mean_auc$cluster
+heatmap <- pheatmap::pheatmap(scale(as.matrix(mean_auc[, -1])))   # clusters × firmas
+ggsave("Module1 (Exploratory Analysis)/results/Annotation/heatmap_signs_clus.png",width = 10, height = 5, dpi = 300)
+
+#Save session information
+Info_script <-sessionInfo()
+
+#Save environment
+save.image("Module1 (Exploratory Analysis)/intermediate/environment.rdata")
