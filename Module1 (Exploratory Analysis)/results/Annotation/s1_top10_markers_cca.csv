@@ -1,14 +1,4 @@
 "p_val","avg_log2FC","pct.1","pct.2","p_val_adj","cluster","gene","direction","Cell_state"
-6.81333221515917e-193,-2.3837293728158,0.292,0.435,1.82399716732026e-188,"0","VEGFA","down","Mesenchymal-like cell state (Wouters); Invasion (Rambow); Neural_Crest_like (Karras); Stress (hypoxia response) (Karras); Neural_Crest_like (Pozniak); Stress (hypoxia response) (Pozniak); Invasive (Verfaillie)"
-2.81636714478053e-105,-2.14336856300847,0.233,0.333,7.53969648329195e-101,"0","CENPF","down","mitosis (Rambow); Mitotic (Karras); Patient_specific_A (Karras); Mitotic (Pozniak); Patient_specific_A (Pozniak); Cycling (AM)"
-9.31515980447772e-77,-1.88590088896829,0.191,0.274,2.49376143125673e-72,"0","HMGB2","down","Mitotic (Karras); Mitotic (Pozniak); Cycling (AM)"
-8.90562595856452e-79,-1.8719164966216,0.176,0.262,2.38412512536731e-74,"0","HILPDA","down","Stress (hypoxia response) (Karras); Stress (hypoxia response) (Pozniak)"
-1.28249562925082e-128,-1.66137953895684,0.223,0.336,3.43336904906736e-124,"0","SLC2A1","down","Mesenchymal-like cell state (Wouters); Stress (hypoxia response) (Karras); Undifferentiated-Neural crest-like (Tsoi); Stress (hypoxia response) (Pozniak)"
-2.27094798922128e-120,-1.56540672855062,0.211,0.319,6.07955486194428e-116,"0","FLNB","down","Mesenchymal-like cell state (Wouters); Neural_Crest_like (Karras); Stress (hypoxia response) (Karras); Undifferentiated-Neural crest-like (Tsoi); Neural_Crest_like (Pozniak); Stress (hypoxia response) (Pozniak); Invasive (Verfaillie)"
-4.89374847241222e-95,-1.35805003501209,0.167,0.263,1.31010540354947e-90,"0","IFI30","down",NA
-7.4200139095234e-26,-1.33230203029218,0.259,0.299,1.98641192371851e-21,"0","GBP1","down","Intermediate cell state (Wouters); Mesenchymal-like cell state (Wouters); Antigen_presentation (Karras); Antigen_presentation (Pozniak); Invasive (Verfaillie)"
-7.32947405394864e-225,-1.2968603213801,0.534,0.68,1.96217349898259e-220,"0","FN1","down","Intermediate cell state (Wouters); Mesenchymal-like cell state (Wouters); Neural_Crest_like (Karras); Mesenchymal_like (Karras); Stress (hypoxia response) (Karras); Neural_Crest_like (Pozniak); Mesenchymal_like (Pozniak); Stress (hypoxia response) (Pozniak); EMT (AM); IFN response (AM)"
-1.65149686015158e-153,-1.22587553229027,0.142,0.272,4.42122224431179e-149,"0","PFKP","down",NA
 0,1.78696891164919,0.283,0.12,0,"0","SNX22","up","Neural_Crest_like (Karras); Mitochondrial(low_quality) (Karras); Neural_Crest_like (Pozniak); Mitochondrial(low_quality) (Pozniak)"
 0,1.78093066288712,0.364,0.162,0,"0","C1QTNF3","up","Mesenchymal-like cell state (Wouters); MITFtargets (Rambow); Patient_specific_A (Karras); Patient_specific_A (Pozniak)"
 0,1.61158290030675,0.459,0.252,0,"0","PCDH9","up","Mesenchymal-like cell state (Wouters); Neural_Crest_like (Karras); Neural_Crest_like (Pozniak)"
@@ -19,16 +9,6 @@
 6.20607801458452e-184,1.18046815633472,0.251,0.129,1.66142914528442e-179,"0","RAB3C","up","Melanocytic cell state (Wouters); Proliferative (Verfaillie)"
 0,1.09863270261926,0.558,0.344,0,"0","SLC26A2","up","Antigen_presentation (Karras); Patient_specific_B (Karras); Antigen_presentation (Pozniak); Patient_specific_B (Pozniak)"
 0,1.05392018760968,0.936,0.818,0,"0","APOD","up","Melanocytic cell state (Wouters); MITFtargets (Rambow); Neural_Crest_like (Karras); Antigen_presentation (Karras); Neural_Crest_like (Pozniak); Antigen_presentation (Pozniak); Proliferative (Verfaillie); RNA processing (AM); Stressed (HSP) (AM)"
-0,-3.71004064079903,0.208,0.449,0,"1","VEGFA","down","Mesenchymal-like cell state (Wouters); Invasion (Rambow); Neural_Crest_like (Karras); Stress (hypoxia response) (Karras); Neural_Crest_like (Pozniak); Stress (hypoxia response) (Pozniak); Invasive (Verfaillie)"
-2.05893576036657e-220,-3.0160115521896,0.256,0.414,5.51197692407735e-216,"1","IGFBP5","down","Mesenchymal-like cell state (Wouters); Invasion (Rambow); Neural_Crest_like (Karras); Stress (hypoxia response) (Karras); Neural_Crest_like (Pozniak); Stress (hypoxia response) (Pozniak); EMT (AM)"
-5.63149239693298e-138,-2.28046480957732,0.154,0.279,1.50760682958293e-133,"1","HMGB2","down","Mitotic (Karras); Mitotic (Pozniak); Cycling (AM)"
-1.34615517998898e-225,-2.27673282262652,0.121,0.289,3.6037920323485e-221,"1","TNFRSF12A","down","Neural_Crest_like (Karras); Mesenchymal_like (Karras); Undifferentiated-Neural crest-like (Tsoi); Neural_Crest_like (Pozniak); Mesenchymal_like (Pozniak)"
-1.74059435963841e-202,-2.14415031771718,0.168,0.324,4.659745160188e-198,"1","FLNB","down","Mesenchymal-like cell state (Wouters); Neural_Crest_like (Karras); Stress (hypoxia response) (Karras); Undifferentiated-Neural crest-like (Tsoi); Neural_Crest_like (Pozniak); Stress (hypoxia response) (Pozniak); Invasive (Verfaillie)"
-2.31676944957378e-251,-2.12922200866901,0.14,0.324,6.20222349345398e-247,"1","GBP2","down","Intermediate cell state (Wouters); Mesenchymal-like cell state (Wouters); Antigen_presentation (Karras); Antigen_presentation (Pozniak); Antigen presentation (AM)"
-1.63755331699973e-104,-1.97891985854194,0.203,0.31,4.38389398493998e-100,"1","GBP1","down","Intermediate cell state (Wouters); Mesenchymal-like cell state (Wouters); Antigen_presentation (Karras); Antigen_presentation (Pozniak); Invasive (Verfaillie)"
-7.98094467310319e-52,-1.91664122326158,0.188,0.256,2.13657869843645e-47,"1","HILPDA","down","Stress (hypoxia response) (Karras); Stress (hypoxia response) (Pozniak)"
-1.6986949062303e-55,-1.80310628255846,0.336,0.408,4.54757613346913e-51,"1","CD74","down","Antigen_presentation (Karras); Antigen_presentation (Pozniak); Antigen presentation (AM); IFN response (AM)"
-2.24570132153565e-139,-1.80148399849705,0.172,0.304,6.01196700788309e-135,"1","ISG15","down","Intermediate cell state (Wouters); Immune (Rambow); Interferon_alpha_beta_response (Karras); Antigen_presentation (Karras); Mitotic (Karras); Interferon_alpha_beta_response (Pozniak); Antigen_presentation (Pozniak); Mitotic (Pozniak); Invasive (Verfaillie); IFN response (AM)"
 8.01044524272319e-312,1.48806704455901,0.326,0.151,2.14447629592942e-307,"1","LINC02303","up","Patient_specific_B (Karras); Patient_specific_B (Pozniak)"
 0,1.43066513271227,0.522,0.251,0,"1","TRPM1","up","Melanocytic cell state (Wouters); MITFtargets (Rambow); pigmentation (Rambow); Interferon_alpha_beta_response (Karras); Stress (p53 response) (Karras); Patient_specific_B (Karras); Melanocytic (Tsoi); Interferon_alpha_beta_response (Pozniak); Stress (p53 response) (Pozniak); Patient_specific_B (Pozniak); Proliferative (Verfaillie); Melanocytic (AM)"
 0,1.27088412149569,0.671,0.367,0,"1","TSPAN10","up","Melanocytic cell state (Wouters); MITFtargets (Rambow); Patient_specific_B (Karras); Melanocytic (Tsoi); Patient_specific_B (Pozniak); Proliferative (Verfaillie)"
@@ -39,16 +19,6 @@
 1.28160597877285e-140,1.07494811973168,0.344,0.213,3.4309873657728e-136,"1","BCAN","up","Melanocytic cell state (Wouters); Mitochondrial(low_quality) (Karras); Mitochondrial(low_quality) (Pozniak); Proliferative (Verfaillie)"
 0,1.03897835412623,0.693,0.496,0,"1","CDH1","up","Melanocytic cell state (Wouters); Patient_specific_B (Karras); Melanocytic (Tsoi); Patient_specific_B (Pozniak); Proliferative (Verfaillie); Melanocytic (AM)"
 0,1.02795180732018,0.77,0.56,0,"1","PYCARD","up","Melanocytic cell state (Wouters); Melanocytic (Tsoi); Melanocytic (AM); Antigen presentation (AM); Stressed (HSP) (AM)"
-2.18004123295677e-96,-2.24722080759945,0.188,0.327,5.83618838474857e-92,"2","CENPF","down","mitosis (Rambow); Mitotic (Karras); Patient_specific_A (Karras); Mitotic (Pozniak); Patient_specific_A (Pozniak); Cycling (AM)"
-2.8446988029062e-104,-2.07002362275911,0.162,0.306,7.61554316526018e-100,"2","GBP1","down","Intermediate cell state (Wouters); Mesenchymal-like cell state (Wouters); Antigen_presentation (Karras); Antigen_presentation (Pozniak); Invasive (Verfaillie)"
-8.6071878518591e-91,-1.53123358384426,0.188,0.324,2.3042302598212e-86,"2","NEGR1","down","Mesenchymal-like cell state (Wouters); Undifferentiated-Neural crest-like (Tsoi)"
-7.59727289328359e-115,-1.52269950437046,0.163,0.319,2.03386592626095e-110,"2","COL22A1","down","Melanocytic cell state (Wouters)"
-1.82995178921621e-95,-1.50548171022302,0.189,0.326,4.89896393491072e-91,"2","AGMO","down","Intermediate cell state (Wouters); Neural crest-like-Transitory (Tsoi)"
-1.51794610691887e-91,-1.43483685563914,0.28,0.415,4.06369352283251e-87,"2","IRF1","down","Mesenchymal-like cell state (Wouters); Antigen_presentation (Karras); Antigen_presentation (Pozniak); Invasive (Verfaillie); IFN response (AM)"
-1.03386894568133e-75,-1.43390046319163,0.179,0.304,2.7677705544835e-71,"2","ZC3H12C","down",NA
-5.69173631205124e-99,-1.37894897319159,0.37,0.508,1.52373472809924e-94,"2","PLAAT4","down",NA
-8.21332884468566e-56,-1.30831981935466,0.198,0.302,2.1987902650108e-51,"2","GBP2","down","Intermediate cell state (Wouters); Mesenchymal-like cell state (Wouters); Antigen_presentation (Karras); Antigen_presentation (Pozniak); Antigen presentation (AM)"
-1.08513474388917e-92,-1.30089246593895,0.153,0.292,2.90501422286569e-88,"2","SAMHD1","down","Antigen_presentation (Karras); Antigen_presentation (Pozniak)"
 2.83527466738716e-70,1.2348522662616,0.353,0.252,7.59031381206216e-66,"2","TRIB3","up","Melanocytic cell state (Wouters); Patient_specific_A (Karras); Patient_specific_A (Pozniak)"
 1.00968847987619e-140,0.992763547652517,0.789,0.699,2.70303702947654e-136,"2","GSTM3","up","Stress (hypoxia response) (Karras); Stress (hypoxia response) (Pozniak)"
 5.1092536922771e-123,0.948607513026754,0.768,0.656,1.3677983059595e-118,"2","SNHG7","up","Melanocytic (Karras); Melanocytic (Pozniak); Melanocytic (AM)"
@@ -59,16 +29,6 @@
 1.37317016921799e-21,0.763659959276489,0.26,0.206,3.67611386001348e-17,"2","GOT1","up","Melanocytic cell state (Wouters); Patient_specific_A (Karras); Patient_specific_A (Pozniak)"
 9.88131291682493e-324,0.739239233952877,0.99,0.962,2.6453262809632e-319,"2","GAS5","up","Antigen presentation (AM)"
 1.63461489724139e-87,0.738251003986679,0.806,0.734,4.37602754140492e-83,"2","GDF15","up","Melanocytic cell state (Wouters); Patient_specific_B (Karras); Transitory-Melanocytic (Tsoi); Patient_specific_B (Pozniak); RNA processing (AM)"
-3.62623791122143e-88,-3.44393552449282,0.117,0.253,9.70780151213088e-84,"3","IGFBP3","down","Mesenchymal-like cell state (Wouters); Neural_Crest_like (Karras); Neural_Crest_like (Pozniak); Invasive (Verfaillie)"
-2.80809371266678e-156,-2.61069319133498,0.222,0.423,7.51754767818025e-152,"3","VEGFA","down","Mesenchymal-like cell state (Wouters); Invasion (Rambow); Neural_Crest_like (Karras); Stress (hypoxia response) (Karras); Neural_Crest_like (Pozniak); Stress (hypoxia response) (Pozniak); Invasive (Verfaillie)"
-4.71164032287522e-65,-2.20230980077972,0.153,0.267,1.26135323083693e-60,"3","HMGB2","down","Mitotic (Karras); Mitotic (Pozniak); Cycling (AM)"
-5.64261249475876e-137,-1.69663019821258,0.18,0.372,1.51058379097187e-132,"3","ENO2","down","Stress (hypoxia response) (Karras); Stress (hypoxia response) (Pozniak)"
-2.17798632795372e-63,-1.65930734566286,0.195,0.306,5.83068719856491e-59,"3","FLNB","down","Mesenchymal-like cell state (Wouters); Neural_Crest_like (Karras); Stress (hypoxia response) (Karras); Undifferentiated-Neural crest-like (Tsoi); Neural_Crest_like (Pozniak); Stress (hypoxia response) (Pozniak); Invasive (Verfaillie)"
-1.1169531201944e-51,-1.59887329761247,0.222,0.321,2.99019519807243e-47,"3","SLC2A1","down","Mesenchymal-like cell state (Wouters); Stress (hypoxia response) (Karras); Undifferentiated-Neural crest-like (Tsoi); Stress (hypoxia response) (Pozniak)"
-2.87928601192108e-138,-1.54748273268614,0.493,0.664,7.70813658251391e-134,"3","FN1","down","Intermediate cell state (Wouters); Mesenchymal-like cell state (Wouters); Neural_Crest_like (Karras); Mesenchymal_like (Karras); Stress (hypoxia response) (Karras); Neural_Crest_like (Pozniak); Mesenchymal_like (Pozniak); Stress (hypoxia response) (Pozniak); EMT (AM); IFN response (AM)"
-6.56447116060329e-128,-1.54105310740106,0.228,0.414,1.75737457440511e-123,"3","THBS2","down","Neuro (Rambow); Neural_Crest_like (Karras); Mitotic (Karras); Neural_Crest_like (Pozniak); Mitotic (Pozniak)"
-3.33038414411813e-54,-1.44260863178772,0.162,0.269,8.91577139221865e-50,"3","TNFRSF12A","down","Neural_Crest_like (Karras); Mesenchymal_like (Karras); Undifferentiated-Neural crest-like (Tsoi); Neural_Crest_like (Pozniak); Mesenchymal_like (Pozniak)"
-2.79371993124286e-51,-1.36475569390086,0.215,0.323,7.47906762793025e-47,"3","S100A4","down","Intermediate cell state (Wouters); Mesenchymal-like cell state (Wouters); Neuro (Rambow); Neural_Crest_like (Karras); Interferon_alpha_beta_response (Karras); Mesenchymal_like (Karras); Neural_Crest_like (Pozniak); Interferon_alpha_beta_response (Pozniak); Mesenchymal_like (Pozniak); Invasive (Verfaillie); EMT (AM)"
 0,3.42004668779933,0.404,0.045,0,"3","GBP1P1","up",NA
 0,3.131501755243,0.414,0.098,0,"3","IFIT2","up","Interferon_alpha_beta_response (Karras); Interferon_alpha_beta_response (Pozniak)"
 0,3.1127223043739,0.353,0.056,0,"3","ETV7","up",NA
@@ -79,16 +39,6 @@
 0,2.99672978925034,0.769,0.242,0,"3","GBP1","up","Intermediate cell state (Wouters); Mesenchymal-like cell state (Wouters); Antigen_presentation (Karras); Antigen_presentation (Pozniak); Invasive (Verfaillie)"
 0,2.93342370414166,0.653,0.136,0,"3","XAF1","up","Intermediate cell state (Wouters); Neural_Crest_like (Karras); Interferon_alpha_beta_response (Karras); Antigen_presentation (Karras); Neural_Crest_like (Pozniak); Interferon_alpha_beta_response (Pozniak); Antigen_presentation (Pozniak); Invasive (Verfaillie); IFN response (AM)"
 0,2.892819144468,0.628,0.177,0,"3","IFIT3","up","Intermediate cell state (Wouters); Immune (Rambow); Interferon_alpha_beta_response (Karras); Antigen_presentation (Karras); Interferon_alpha_beta_response (Pozniak); Antigen_presentation (Pozniak)"
-5.44547629695137e-189,-2.84416682381633,0.109,0.345,1.45780845945685e-184,"4","UNC13C","down",NA
-8.16809088330582e-319,-2.3255266982168,0.17,0.508,2.1866796103698e-314,"4","CHST9","down",NA
-2.10089931434686e-74,-2.11031472890333,0.164,0.301,5.62431755443799e-70,"4","GBP1","down","Intermediate cell state (Wouters); Mesenchymal-like cell state (Wouters); Antigen_presentation (Karras); Antigen_presentation (Pozniak); Invasive (Verfaillie)"
-1.12161485210614e-259,-2.07432124332303,0.214,0.503,3.00267512057336e-255,"4","C2orf88","down","Melanocytic cell state (Wouters); MITFtargets (Rambow); Patient_specific_B (Karras); Melanocytic (Tsoi); Patient_specific_B (Pozniak); Proliferative (Verfaillie)"
-1.34363662885396e-153,-2.05799369365101,0.08,0.292,3.59704961910494e-149,"4","GJB6","down",NA
-2.63211281856242e-253,-2.0012165432246,0.235,0.524,7.04642922657347e-249,"4","POSTN","down","Mesenchymal-like cell state (Wouters); Neural_Crest_like (Karras); Interferon_alpha_beta_response (Karras); Mesenchymal_like (Karras); Neural_Crest_like (Pozniak); Interferon_alpha_beta_response (Pozniak); Mesenchymal_like (Pozniak); Invasive (Verfaillie)"
-6.40887539995914e-145,-1.99323505953839,0.096,0.301,1.71572003332306e-140,"4","GJB2","down",NA
-2.65897163348084e-111,-1.96357667800528,0.089,0.26,7.11833295999155e-107,"4","CNDP1","down","Patient_specific_A (Karras); Patient_specific_A (Pozniak)"
-3.3629717424782e-169,-1.96308301529101,0.143,0.374,9.0030116517884e-165,"4","LINC02552","down","Patient_specific_B (Karras); Patient_specific_B (Pozniak)"
-3.1249619330118e-168,-1.87714973282543,0.229,0.454,8.3658355908659e-164,"4","LRRTM4","down","Intermediate cell state (Wouters); Transitory (Tsoi)"
 0,4.30408914379348,0.316,0.054,0,"4","VGF","up","Melanocytic cell state (Wouters); Patient_specific_A (Karras); Transitory-Melanocytic (Tsoi); Patient_specific_A (Pozniak); Proliferative (Verfaillie)"
 0,4.10174840849729,0.518,0.216,0,"4","IGFBP3","up","Mesenchymal-like cell state (Wouters); Neural_Crest_like (Karras); Neural_Crest_like (Pozniak); Invasive (Verfaillie)"
 0,3.31762126956663,0.322,0.101,0,"4","CEMIP","up","Neural crest-like (Tsoi)"
@@ -99,16 +49,6 @@
 1.87598970024366e-228,2.82633167544211,0.263,0.091,5.0222120265223e-224,"4","LOX","up","Mesenchymal-like cell state (Wouters); Invasion (Rambow); Invasive (Verfaillie)"
 0,2.63915796825481,0.481,0.192,0,"4","SERPINE1","up","Intermediate cell state (Wouters); Mesenchymal-like cell state (Wouters); Invasive (Verfaillie)"
 0,2.4687765249767,0.619,0.228,0,"4","TNFRSF12A","up","Neural_Crest_like (Karras); Mesenchymal_like (Karras); Undifferentiated-Neural crest-like (Tsoi); Neural_Crest_like (Pozniak); Mesenchymal_like (Pozniak)"
-2.0355088665224e-134,-2.11861101904181,0.163,0.378,5.44926078656711e-130,"5","PI15","down","Intermediate cell state (Wouters); Melanocytic cell state (Wouters); Transitory-Melanocytic (Tsoi)"
-8.42894738630773e-77,-2.07587154172375,0.169,0.323,2.25651350478844e-72,"5","CENPF","down","mitosis (Rambow); Mitotic (Karras); Patient_specific_A (Karras); Mitotic (Pozniak); Patient_specific_A (Pozniak); Cycling (AM)"
-1.02182831036973e-94,-2.00151390124521,0.134,0.303,2.73553656969081e-90,"5","ZC3H12C","down",NA
-1.99497621588464e-98,-1.80399650448979,0.129,0.306,5.34075082754478e-94,"5","KPNA2","down","Mitotic (Karras); Patient_specific_A (Karras); Mitotic (Pozniak); Patient_specific_A (Pozniak); Cycling (AM)"
-6.06844912210638e-97,-1.78748077068036,0.105,0.276,1.6245845144791e-92,"5","NOX4","down","Melanocytic cell state (Wouters); Patient_specific_A (Karras); Patient_specific_A (Pozniak)"
-2.57548667528902e-144,-1.67635950227554,0.135,0.36,6.89483537841624e-140,"5","CLCN5","down","Melanocytic cell state (Wouters); MITFtargets (Rambow); Patient_specific_A (Karras); Patient_specific_A (Pozniak); Proliferative (Verfaillie)"
-1.88475287476883e-154,-1.66299480278349,0.197,0.435,5.04567192104364e-150,"5","P2RX7","down","Melanocytic cell state (Wouters); Interferon_alpha_beta_response (Karras); Transitory-Melanocytic (Tsoi); Interferon_alpha_beta_response (Pozniak); Melanocytic (AM); Stressed (HSP) (AM)"
-1.01766417150559e-92,-1.6219185581424,0.104,0.269,2.72438875353761e-88,"5","PIK3R3","down","Melanocytic cell state (Wouters)"
-7.26673431775954e-96,-1.61024295462876,0.125,0.3,1.94537744420741e-91,"5","VAV3","down","Melanocytic cell state (Wouters); MITFtargets (Rambow); Patient_specific_B (Karras); Patient_specific_B (Pozniak)"
-2.13909623687033e-106,-1.56081652402303,0.169,0.355,5.72657453572555e-102,"5","SEMA6D","down","Melanocytic cell state (Wouters); Proliferative (Verfaillie)"
 0,4.29327269472796,0.366,0.045,0,"5","NDUFA4L2","up","Mesenchymal-like cell state (Wouters); Hypometabolic (Rambow); Stress (hypoxia response) (Karras); Stress (hypoxia response) (Pozniak); Invasive (Verfaillie)"
 0,4.1642099879675,0.306,0.026,0,"5","MT3","up",NA
 0,3.67039672945576,0.274,0.025,0,"5","PDE4C","up",NA
@@ -119,16 +59,6 @@
 0,3.03381768370982,0.72,0.312,0,"5","NRN1","up","Stress (hypoxia response) (Karras); Stress (hypoxia response) (Pozniak)"
 5.57856694553221e-205,3.03115198236097,0.321,0.135,1.49343815698843e-200,"5","HMOX1","up","Melanocytic cell state (Wouters); Melanocytic (Tsoi)"
 0,2.96275392690832,0.294,0.045,0,"5","ESPN","up","Melanocytic cell state (Wouters)"
-2.5510624695452e-95,-1.88096282449761,0.13,0.336,6.82944933721947e-91,"6","CKS1B","down","Mitotic (Karras); Patient_specific_A (Karras); Mitotic (Pozniak); Patient_specific_A (Pozniak); Cycling (AM)"
-2.85535862558322e-51,-1.87458336777354,0.148,0.287,7.64408057654883e-47,"6","ISG15","down","Intermediate cell state (Wouters); Immune (Rambow); Interferon_alpha_beta_response (Karras); Antigen_presentation (Karras); Mitotic (Karras); Interferon_alpha_beta_response (Pozniak); Antigen_presentation (Pozniak); Mitotic (Pozniak); Invasive (Verfaillie); IFN response (AM)"
-1.09856609302774e-99,-1.8079974227127,0.088,0.295,2.94097128764456e-95,"6","UQCRHL","down",NA
-2.67394698038713e-75,-1.6882855022619,0.344,0.502,7.15842346119438e-71,"6","PLAAT4","down",NA
-7.89529210341103e-105,-1.62207567373826,0.191,0.422,2.11364864900417e-100,"6","MT1X","down","Interferon_alpha_beta_response (Karras); Interferon_alpha_beta_response (Pozniak); Antigen presentation (AM)"
-2.05774134090767e-24,-1.61593737027444,0.171,0.261,5.50877934374391e-20,"6","HMGB2","down","Mitotic (Karras); Mitotic (Pozniak); Cycling (AM)"
-1.95399474917696e-191,-1.57830526272872,0.697,0.826,5.23103934302164e-187,"6","IFITM1","down","Intermediate cell state (Wouters); Mesenchymal-like cell state (Wouters); Immune (Rambow); Interferon_alpha_beta_response (Karras); Antigen_presentation (Karras); Interferon_alpha_beta_response (Pozniak); Antigen_presentation (Pozniak); Invasive (Verfaillie)"
-2.76242774534037e-143,-1.57635962468288,0.165,0.437,7.39529531705069e-139,"6","DCTPP1","down","Mitotic (Karras); Patient_specific_A (Karras); Mitotic (Pozniak); Patient_specific_A (Pozniak)"
-1.39194886289055e-77,-1.57352121458338,0.098,0.275,3.72638630084429e-73,"6","NPM3","down","Melanocytic cell state (Wouters); Patient_specific_A (Karras); Patient_specific_A (Pozniak); Proliferative (Verfaillie)"
-9.11676727804774e-139,-1.57087844712585,0.498,0.721,2.44064976800616e-134,"6","GSTM3","down","Stress (hypoxia response) (Karras); Stress (hypoxia response) (Pozniak)"
 1.5630899879304e-173,2.15722942050896,0.434,0.219,4.18454820668847e-169,"6","ROR1","up","Melanocytic cell state (Wouters)"
 0,2.13539890899041,0.701,0.346,0,"6","ENSG00000289405","up",NA
 1.70799645987575e-148,2.09809746861887,0.443,0.248,4.57247732273338e-144,"6","NBEA","up","Patient_specific_A (Karras); Patient_specific_A (Pozniak)"
@@ -139,16 +69,6 @@
 4.34110256782967e-178,1.95216019823769,0.559,0.343,1.16215656843368e-173,"6","MIR3142HG","up","Stress (p53 response) (Karras); Stress (p53 response) (Pozniak)"
 1.7497969388784e-238,1.9491948381959,0.57,0.298,4.68438138507135e-234,"6","MIR222HG","up","Patient_specific_A (Karras); Patient_specific_A (Pozniak)"
 0,1.94704743445803,0.967,0.82,0,"6","IMMP2L","up","Patient_specific_B (Karras); Patient_specific_A (Karras); Patient_specific_B (Pozniak); Patient_specific_A (Pozniak)"
-1.37076511837521e-50,-1.70041014469158,0.142,0.282,3.66967529840229e-46,"7","GJB6","down",NA
-1.00654612442711e-98,-1.50832856744869,0.338,0.539,2.69462462970381e-94,"7","PLA1A","down","Intermediate cell state (Wouters); Melanocytic cell state (Wouters); Patient_specific_B (Karras); Transitory-Melanocytic (Tsoi); Patient_specific_B (Pozniak); Proliferative (Verfaillie)"
-5.2935507789724e-17,-1.43214191130341,0.235,0.316,1.4171364790387e-12,"7","CENPF","down","mitosis (Rambow); Mitotic (Karras); Patient_specific_A (Karras); Mitotic (Pozniak); Patient_specific_A (Pozniak); Cycling (AM)"
-7.39780282279049e-133,-1.28143956168279,0.675,0.785,1.98046579368924e-128,"7","NRG3","down","Melanocytic cell state (Wouters); Transitory-Melanocytic (Tsoi); Proliferative (Verfaillie)"
-9.05902527269477e-78,-1.27090609336692,0.23,0.434,2.42519165575312e-73,"7","CEACAM1","down","Melanocytic cell state (Wouters); Patient_specific_A (Karras); Melanocytic (Tsoi); Patient_specific_A (Pozniak); Proliferative (Verfaillie)"
-6.41234447605827e-48,-1.2613479108885,0.124,0.267,1.71664873968556e-43,"7","ALK","down","Melanocytic cell state (Wouters)"
-2.63159541664911e-25,-1.25886900905348,0.429,0.497,7.04504408991133e-21,"7","PLAAT4","down",NA
-7.26427593162783e-36,-1.21917308528166,0.172,0.291,1.94471930965609e-31,"7","GJB2","down",NA
-5.42703010155779e-51,-1.18475442140086,0.16,0.314,1.45287022848804e-46,"7","ELOVL2","down","Mitochondrial(low_quality) (Karras); Mitochondrial(low_quality) (Pozniak)"
-2.60177450181728e-20,-1.13968569783439,0.168,0.253,6.96521051881504e-16,"7","ATAD2","down","Mitotic (Karras); Patient_specific_A (Karras); Mitotic (Pozniak); Patient_specific_A (Pozniak); Cycling (AM)"
 6.34210205208997e-166,2.77427577084819,0.317,0.121,1.69784414036501e-161,"7","CCN2","up",NA
 0,2.72366763205754,0.922,0.635,0,"7","FN1","up","Intermediate cell state (Wouters); Mesenchymal-like cell state (Wouters); Neural_Crest_like (Karras); Mesenchymal_like (Karras); Stress (hypoxia response) (Karras); Neural_Crest_like (Pozniak); Mesenchymal_like (Pozniak); Stress (hypoxia response) (Pozniak); EMT (AM); IFN response (AM)"
 0,2.64472534221513,0.77,0.432,0,"7","CCN1","up","Antigen presentation (AM)"
@@ -159,16 +79,6 @@
 4.43808091541962e-91,1.58118344078237,0.405,0.235,1.18811864186699e-86,"7","HILPDA","up","Stress (hypoxia response) (Karras); Stress (hypoxia response) (Pozniak)"
 6.00301406385396e-191,1.51698361806023,0.554,0.283,1.60706689503434e-186,"7","FLNB","up","Mesenchymal-like cell state (Wouters); Neural_Crest_like (Karras); Stress (hypoxia response) (Karras); Undifferentiated-Neural crest-like (Tsoi); Neural_Crest_like (Pozniak); Stress (hypoxia response) (Pozniak); Invasive (Verfaillie)"
 1.03780369119119e-103,1.48954469604562,0.349,0.172,2.77830426168793e-99,"7","COL5A2","up","Intermediate cell state (Wouters); Mesenchymal-like cell state (Wouters); Neural_Crest_like (Karras); Mesenchymal_like (Karras); Neural_Crest_like (Pozniak); Mesenchymal_like (Pozniak); Invasive (Verfaillie)"
-3.07640098724675e-74,-2.90000293002346,0.229,0.413,8.23583308295828e-70,"8","VEGFA","down","Mesenchymal-like cell state (Wouters); Invasion (Rambow); Neural_Crest_like (Karras); Stress (hypoxia response) (Karras); Neural_Crest_like (Pozniak); Stress (hypoxia response) (Pozniak); Invasive (Verfaillie)"
-1.07565991005617e-53,-2.35268290785909,0.239,0.392,2.87964914521138e-49,"8","IGFBP5","down","Mesenchymal-like cell state (Wouters); Invasion (Rambow); Neural_Crest_like (Karras); Stress (hypoxia response) (Karras); Neural_Crest_like (Pozniak); Stress (hypoxia response) (Pozniak); EMT (AM)"
-6.1429704092418e-159,-2.14209550720206,0.318,0.599,1.64453460825812e-154,"8","NDRG1","down","Mesenchymal-like cell state (Wouters); Neural_Crest_like (Karras); Stress (hypoxia response) (Karras); Neural_Crest_like (Pozniak); Stress (hypoxia response) (Pozniak)"
-5.08582331180088e-99,-2.06268721863119,0.194,0.422,1.36152575880221e-94,"8","FGFBP2","down","Interferon_alpha_beta_response (Karras); Antigen_presentation (Karras); Interferon_alpha_beta_response (Pozniak); Antigen_presentation (Pozniak)"
-7.33959728773503e-71,-1.99684287768874,0.143,0.325,1.96488358989954e-66,"8","ATP1B2","down","Neuro (Rambow)"
-9.9188181284002e-68,-1.96058187261185,0.089,0.262,2.65536680115402e-63,"8","KDM7A","down",NA
-1.08268565583082e-49,-1.82205410433776,0.204,0.349,2.8984577692247e-45,"8","NRN1","down","Stress (hypoxia response) (Karras); Stress (hypoxia response) (Pozniak)"
-1.22779967649305e-39,-1.79317862721283,0.178,0.302,3.28694251393954e-35,"8","FLNB","down","Mesenchymal-like cell state (Wouters); Neural_Crest_like (Karras); Stress (hypoxia response) (Karras); Undifferentiated-Neural crest-like (Tsoi); Neural_Crest_like (Pozniak); Stress (hypoxia response) (Pozniak); Invasive (Verfaillie)"
-4.14771196065991e-123,-1.63895510190277,0.283,0.535,1.11038396898827e-118,"8","MIR100HG","down",NA
-9.77245228681532e-23,-1.58014887948167,0.163,0.255,2.61618320170333e-18,"8","H4C8","down",NA
 0,6.01044316738384,0.491,0.013,0,"8","FAM111B","up","Mitotic (Karras); Mitotic (Pozniak)"
 0,5.84710065491365,0.628,0.031,0,"8","RRM2","up","Mitotic (Karras); Mitotic (Pozniak); Cycling (AM)"
 0,5.7010265708163,0.589,0.02,0,"8","MYBL2","up","mitosis (Rambow); Mitotic (Karras); Patient_specific_A (Karras); Mitotic (Pozniak); Patient_specific_A (Pozniak)"
@@ -179,16 +89,6 @@
 0,5.19798904665646,0.765,0.04,0,"8","CLSPN","up","Mitotic (Karras); Mitotic (Pozniak); Cycling (AM)"
 0,5.11026859313417,0.817,0.055,0,"8","PCLAF","up","Mitotic (Karras); Patient_specific_A (Karras); Mitotic (Pozniak); Patient_specific_A (Pozniak); Cycling (AM)"
 0,5.08568746181688,0.499,0.019,0,"8","EXO1","up","Mitotic (Karras); Mitotic (Pozniak)"
-1.97406224622778e-93,-2.69210976957271,0.099,0.344,5.28476203937639e-89,"9","SPARCL1","down","Melanocytic cell state (Wouters); Antigen_presentation (Karras); Antigen_presentation (Pozniak)"
-1.06905935517743e-91,-2.34753146108119,0.081,0.323,2.8619787997455e-87,"9","RARRES2","down",NA
-9.7418819170235e-84,-2.20476415679545,0.076,0.303,2.60799920800636e-79,"9","GSTM1","down","Invasive (Verfaillie)"
-1.55405993825644e-66,-2.11514251092772,0.062,0.253,4.16037386070631e-62,"9","CNDP1","down","Patient_specific_A (Karras); Patient_specific_A (Pozniak)"
-2.33608153939857e-71,-2.11106426517458,0.081,0.286,6.25392388912391e-67,"9","ENSG00000234426","down",NA
-4.35397432247024e-113,-2.05390598723759,0.094,0.383,1.16560246586851e-108,"9","GRIA4","down",NA
-3.4173700965035e-125,-1.99790994073024,0.163,0.469,9.14864148534951e-121,"9","ANGPT2","down","Interferon_alpha_beta_response (Karras); Interferon_alpha_beta_response (Pozniak)"
-1.11199211224702e-76,-1.90178084971991,0.099,0.32,2.97691408369649e-72,"9","AGMO","down","Intermediate cell state (Wouters); Neural crest-like-Transitory (Tsoi)"
-1.26996226489302e-60,-1.89417520796285,0.113,0.305,3.3998159793451e-56,"9","TF","down","Intermediate cell state (Wouters); Mesenchymal-like cell state (Wouters); Mitochondrial(low_quality) (Karras); Stress (hypoxia response) (Karras); Patient_specific_A (Karras); Mitochondrial(low_quality) (Pozniak); Stress (hypoxia response) (Pozniak); Patient_specific_A (Pozniak)"
-9.19703034237908e-89,-1.8890341234916,0.088,0.335,2.4621369929583e-84,"9","UNC13C","down",NA
 0,4.74311908444734,0.328,0.03,0,"9","LAPTM5","up","Invasive (Verfaillie)"
 0,4.53846108789453,0.432,0.049,0,"9","PTPRC","up",NA
 0,4.24791281707943,0.285,0.052,0,"9","TYROBP","up",NA
@@ -199,16 +99,6 @@
 6.67768346641947e-291,3.49416007335699,0.276,0.056,1.78768264079516e-286,"9","ARHGAP15","up","Intermediate cell state (Wouters); Melanocytic cell state (Wouters)"
 0,3.43930827596351,0.345,0.077,0,"9","HLA-DRB5","up","Mesenchymal-like cell state (Wouters); Antigen_presentation (Karras); Antigen_presentation (Pozniak)"
 0,3.4237088664573,0.544,0.134,0,"9","HLA-DRB1","up","Intermediate cell state (Wouters); Mesenchymal-like cell state (Wouters); Antigen_presentation (Karras); Antigen_presentation (Pozniak); Antigen presentation (AM)"
-1.66123367777047e-84,-2.19638269382698,0.131,0.364,4.44728867875931e-80,"10","LINC02552","down","Patient_specific_B (Karras); Patient_specific_B (Pozniak)"
-3.25143286705182e-72,-2.04457175817485,0.17,0.379,8.70441092838443e-68,"10","GRIA4","down",NA
-5.19537573031239e-96,-2.02753151274474,0.544,0.715,1.39085403676193e-91,"10","GSTM3","down","Stress (hypoxia response) (Karras); Stress (hypoxia response) (Pozniak)"
-1.93638806820133e-77,-2.0080976264208,0.233,0.46,5.18390449738178e-73,"10","MIR3681HG","down",NA
-1.76476465925384e-61,-1.97263592381979,0.141,0.333,4.72445146928847e-57,"10","UNC13C","down",NA
-5.48533317979021e-33,-1.8962026195944,0.123,0.256,1.46847854556164e-28,"10","H4C8","down",NA
-1.86387020240629e-44,-1.89576741190126,0.144,0.303,4.98976691886188e-40,"10","TF","down","Intermediate cell state (Wouters); Mesenchymal-like cell state (Wouters); Mitochondrial(low_quality) (Karras); Stress (hypoxia response) (Karras); Patient_specific_A (Karras); Mitochondrial(low_quality) (Pozniak); Stress (hypoxia response) (Pozniak); Patient_specific_A (Pozniak)"
-5.92721271468427e-57,-1.87342173621049,0.119,0.302,1.58677411584813e-52,"10","GSTM1","down","Invasive (Verfaillie)"
-4.59846339309346e-23,-1.8412996914199,0.309,0.409,1.23105463496505e-18,"10","VEGFA","down","Mesenchymal-like cell state (Wouters); Invasion (Rambow); Neural_Crest_like (Karras); Stress (hypoxia response) (Karras); Neural_Crest_like (Pozniak); Stress (hypoxia response) (Pozniak); Invasive (Verfaillie)"
-5.9724185539458e-54,-1.82136430646161,0.124,0.302,1.59887617107683e-49,"10","PCDH9","down","Mesenchymal-like cell state (Wouters); Neural_Crest_like (Karras); Neural_Crest_like (Pozniak)"
 0,5.22085912238935,0.352,0.054,0,"10","CXCL10","up","Immune (Rambow)"
 0,4.90363970907448,0.589,0.082,0,"10","CXCL2","up","Mesenchymal-like cell state (Wouters); Invasive (Verfaillie); IFN response (AM)"
 0,4.88487337668994,0.471,0.039,0,"10","ENSG00000285744","up",NA
@@ -219,16 +109,6 @@
 0,4.26591088361889,0.59,0.092,0,"10","CXCL8","up","Neural crest-like (Tsoi); IFN response (AM)"
 1.57329177752043e-313,4.06641695144505,0.289,0.056,4.21185941759996e-309,"10","VCAM1","up","Mesenchymal-like cell state (Wouters); Invasive (Verfaillie)"
 0,4.02108285751884,0.735,0.139,0,"10","BIRC3","up","Mesenchymal-like cell state (Wouters); Immune (Rambow); Antigen_presentation (Karras); Antigen_presentation (Pozniak); Invasive (Verfaillie)"
-1.04236514499648e-109,-2.7927081036617,0.122,0.421,2.79051572967008e-105,"11","FGFBP2","down","Interferon_alpha_beta_response (Karras); Antigen_presentation (Karras); Interferon_alpha_beta_response (Pozniak); Antigen_presentation (Pozniak)"
-5.03332321050057e-80,-2.52933015810943,0.109,0.35,1.34747095668311e-75,"11","NRN1","down","Stress (hypoxia response) (Karras); Stress (hypoxia response) (Pozniak)"
-2.43547098275049e-49,-2.38949268967101,0.213,0.391,6.51999936792133e-45,"11","IGFBP5","down","Mesenchymal-like cell state (Wouters); Invasion (Rambow); Neural_Crest_like (Karras); Stress (hypoxia response) (Karras); Neural_Crest_like (Pozniak); Stress (hypoxia response) (Pozniak); EMT (AM)"
-2.10492022120298e-65,-2.37078319665534,0.097,0.308,5.63508192418249e-61,"11","LINC01239","down",NA
-4.66586152330324e-32,-2.24198624146101,0.173,0.3,1.24909778840351e-27,"11","PCDH9","down","Mesenchymal-like cell state (Wouters); Neural_Crest_like (Karras); Neural_Crest_like (Pozniak)"
-1.15674019621477e-92,-2.2225380372221,0.089,0.356,3.09670917928656e-88,"11","SLC16A4","down","Mesenchymal-like cell state (Wouters); Patient_specific_B (Karras); Patient_specific_B (Pozniak)"
-7.1025021757947e-57,-2.16743426232237,0.128,0.323,1.901410857482e-52,"11","ATP1B2","down","Neuro (Rambow)"
-3.38281657245096e-50,-1.97837424379611,0.108,0.285,9.05613824610846e-46,"11","NANOS1","down","Melanocytic cell state (Wouters); Patient_specific_A (Karras); Patient_specific_A (Pozniak); Proliferative (Verfaillie)"
-1.34180052625626e-104,-1.82341090009491,0.317,0.595,3.59213418884062e-100,"11","NDRG1","down","Mesenchymal-like cell state (Wouters); Neural_Crest_like (Karras); Stress (hypoxia response) (Karras); Neural_Crest_like (Pozniak); Stress (hypoxia response) (Pozniak)"
-2.17448026836229e-92,-1.81446776021173,0.515,0.715,5.82130112643268e-88,"11","GSTM3","down","Stress (hypoxia response) (Karras); Stress (hypoxia response) (Pozniak)"
 0,6.46293089978818,0.708,0.021,0,"11","PLK1","up","mitosis (Rambow); Mitotic (Karras); Mitotic (Pozniak)"
 0,6.21225404060136,0.643,0.015,0,"11","KIF20A","up",NA
 0,6.1398149536598,0.615,0.016,0,"11","NEK2","up","mitosis (Rambow); Mitotic (Karras); Mitotic (Pozniak)"

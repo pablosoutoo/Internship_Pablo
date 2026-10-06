@@ -375,7 +375,7 @@ gc()
 ##returns an EMPTY table without a "cluster" column, which is what made group_by(cluster) fail.
 data <- PrepSCTFindMarkers(data, assay = "SCT")
 Idents(data) <- "clusters_cca"
-data.markers <- FindAllMarkers(data, assay = "SCT", only.pos = FALSE, min.pct = 0.25, logfc.threshold = 0.2)
+data.markers <- FindAllMarkers(data, assay = "SCT", only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.2)
 stopifnot(nrow(data.markers) > 0)   # if this stops, run warnings() to see why each cluster failed
 data.markers %>%
   group_by(cluster) %>%
