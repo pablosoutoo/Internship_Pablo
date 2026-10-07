@@ -11,6 +11,7 @@ library(sctransform)
 data<-qs_read("Inputs/External/stripped_s1_harmony_tumor_cells.qs2")
 data
 
+
 #Standard preprocessing workflow
 
 ##Calculate the mitochondrial QC metrics 
@@ -18,13 +19,16 @@ data[["percent.mt"]] <-PercentageFeatureSet(data, pattern = "^MT-")
 
 ##Visualize in plots
 violin_plot<-VlnPlot(data, features =c("nFeature_RNA", "nCount_RNA", "percent.mt"),pt.size = 0, ncol=3)
-
+violin_plot
 ggsave(filename="Module1 (Exploratory Analysis)/results/s1_mitocond_pres.png", plot=violin_plot,width = 8, height = 6, dpi = 300)
 
 ##FeatureScatter <- Tipically used to visualize feature-feature relationship
 
 plot1 <- FeatureScatter(data, feature1 = "nCount_RNA", feature2 = "percent.mt")
 plot2 <- FeatureScatter(data, feature1 = "nFeature_RNA", feature2 = "nCount_RNA")
+
+plot1
+plot2
 
 ggsave(filename="Module1 (Exploratory Analysis)/results/s1_feat_scatt_1.png", plot=plot1,width = 8, height = 6, dpi = 300)
 ggsave(filename="Module1 (Exploratory Analysis)/results/s1_feat_scatt_2.png", plot=plot2,width = 8, height = 6, dpi = 300)
@@ -105,9 +109,17 @@ stopifnot(length(unique(data$patient_id)) > 1)
 data <- PercentageFeatureSet(data, pattern = "^MT-", col.name = 'percent.mt')
 data<- SCTransform(data)
 
-drop <- c(grep("^(MT-|RP[SL]\\d|TR[ABDG][VJC]|IG[HKL][VJC])", rownames(data), value = TRUE),
+
+#Drop some genes that we are not interested in
+drop <- c(grep("^(MT-|                      #Mitocondrial genes
+               RP[SL]\\d|                   #Ribosomal proteins
+               TR[ABDG][VJC]|               #V,J and C segmenst of the TCR (clonotipe specific and they would split the cells by clone)
+               IG[HKL][VJC])",              #V,J and C segments of immunoglobulines
+               rownames(data), value = TRUE),
           "HTN1", "HTN3", "STATH", t_id, cyto,
           "PTPRC", "IL32", "CD52", "CORO1A", "CCL4", "CD7", "LAG3", "CD69")
+
+
 VariableFeatures(data) <- setdiff(VariableFeatures(data), drop)
 
 dim(data)
@@ -306,12 +318,16 @@ data <- FindNeighbors(data, reduction = "integrated.cca", dims = 1:15,
 data <- FindClusters(data, graph.name = "cca_snn", resolution = 0.5,
                      cluster.name = "clusters_cca")
 
+
+
 qs_save(data, "Module1 (Exploratory Analysis)/intermediate/s1_data_cca.qs2")
 
 cca_integration <-function(data, n_neighbors, minimum_distance){
   set.seed(42)
   data <- RunUMAP(data, reduction = "integrated.cca", dims = 1:15, reduction.name = "umap.ccaintegration", n.neighbors =n_neighbors, min.dist = minimum_distance)
-  
+ 
+
+   
   #A text to write down the parameters values
   params_text <- paste0("minumum_distance = ",minimum_distance, " | num_neighbors = ", n_neighbors)
   
@@ -326,6 +342,7 @@ cca_integration <-function(data, n_neighbors, minimum_distance){
              n_neighbors = n_neighbors, minimum_distance = minimum_distance,
              row.names  = NULL)
 }
+
 
 
 # test_plot <- cca_integration(data, n_neighbors = 30L, minimum_distance = 0.3 )
@@ -533,9 +550,9 @@ table(data$clusters_cca, data$cell_state_cca)
 ##3. Labelled UMAP (one final CCA UMAP, with the setting you chose from the grid)
 data <- RunUMAP(data, reduction = "integrated.cca", dims = 1:15, reduction.name = "umap.cca",
                 n.neighbors = 30L, min.dist = 0.3)
-umap_states <- DimPlot(data, reduction = "umap.cca", group.by = "cell_state_cca",
+umap_states <- DimPlot(data, reduction = "umap.cca", group.by = "AUCell_states",
                        label = TRUE, repel = TRUE, pt.size = 0.5) + NoLegend() +
-  ggtitle("CCA clusters - cell states")
+  ggtitle("AuCell - cell states")
 umap_states
 ggsave(file.path(annot_dir, "s1_UMAP_cell_states_cca_AUCell.png"), umap_states, width = 8, height = 6, dpi = 300)
 
