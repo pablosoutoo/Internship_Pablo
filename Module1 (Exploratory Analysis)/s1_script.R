@@ -402,8 +402,7 @@ dir.create(annot_dir, showWarnings = FALSE, recursive = TRUE)
 ##1. Evidence: top markers per cluster + canonical genes of each state
 top_markers <- data.markers %>%
   filter(p_val_adj < 0.05, avg_log2FC > 0.5) %>%
-  mutate(delta_pct = pct.1 - pct.2,
-         strict = pct.1 >= 0.5 & delta_pct >= 0.3) %>%
+  mutate(delta_pct = pct.1 - pct.2) %>%
   group_by(cluster) %>%
   slice_max(avg_log2FC * delta_pct, n = 10, with_ties = FALSE) %>%
   ungroup()
@@ -442,22 +441,22 @@ ggsave(file.path(annot_dir, "s1_canonical_dotplot_cca.png"), dot_cca, width = 12
 
 ##2. One name per cluster. Fill these in after looking at the dot plot and the marker table;
 ##clusters you are not sure about stay "Unassigned". Two clusters may share the same name.
-cca_labels <- setNames(rep("Unassigned", nlevels(data$clusters_cca)), levels(data$clusters_cca))
-cca_labels["0"]  <- "Neural crest-like"            #SOX10 high; NCMAP, SCN7A, SCRG1, ANGPTL7
-cca_labels["1"]  <- "Melanocytic"                  #PMEL, MLANA, MITF, DCT, TYR
-cca_labels["2"]  <- "Stress (ATF4 / amino acid)"   #ASNS, TRIB3, GDF15, CDKN1A (weak markers)
-cca_labels["3"]  <- "IFN response"                 #GBP1/4, IFIT2, IFI44L, STAT1, B2M, HLA-A
-cca_labels["4"]  <- "Mesenchymal-like (invasive)"  #MMP1, MMP3, IL11, SERPINB2, SERPINE1, INHBA
-cca_labels["5"]  <- "Stress (hypoxia)"             #NDUFA4L2, VEGFA, CA9, MT3
-cca_labels["6"]  <- "Melanocytic (pigmentation)"   #TYR, MITF, DCT high; low MHC-I
-cca_labels["7"]  <- "Mesenchymal-like (TGFb/YAP)"  #FN1, TAGLN, CCN1, CCN2, DKK1
-cca_labels["8"]  <- "Mitotic (G1/S)"               #E2F2, RRM2, MCM10, CDC45, CLSPN
-cca_labels["9"]  <- "Antigen presentation (MHC-II)" #CD74, HLA-DRA; B-cell genes in ~5% of cells
-cca_labels["10"] <- "Inflammatory (NF-kB)"         #CXCL10/11, CCL2, CXCL2, SELE, HSPA6
-cca_labels["11"] <- "Mitotic (G2/M)"               #PLK1, CDC20, KIF20A, MKI67, TOP2A
-cca_labels
+AuCell_labels <- setNames(rep("Unassigned", nlevels(data$clusters_cca)), levels(data$clusters_cca))
+AuCell_labels["0"]  <- "Neural crest-like"            #SOX10 high; NCMAP, SCN7A, SCRG1, ANGPTL7
+AuCell_labels["1"]  <- "Melanocytic"                  #PMEL, MLANA, MITF, DCT, TYR
+AuCell_labels["2"]  <- "Stress (ATF4 / amino acid)"   #ASNS, TRIB3, GDF15, CDKN1A (weak markers)
+AuCell_labels["3"]  <- "IFN response"                 #GBP1/4, IFIT2, IFI44L, STAT1, B2M, HLA-A
+AuCell_labels["4"]  <- "Mesenchymal-like (invasive)"  #MMP1, MMP3, IL11, SERPINB2, SERPINE1, INHBA
+AuCell_labels["5"]  <- "Stress (hypoxia)"             #NDUFA4L2, VEGFA, CA9, MT3
+AuCell_labels["6"]  <- "Melanocytic (pigmentation)"   #TYR, MITF, DCT high; low MHC-I
+AuCell_labels["7"]  <- "Mesenchymal-like (TGFb/YAP)"  #FN1, TAGLN, CCN1, CCN2, DKK1
+AuCell_labels["8"]  <- "Mitotic (G1/S)"               #E2F2, RRM2, MCM10, CDC45, CLSPN
+AuCell_labels["9"]  <- "Antigen presentation (MHC-II)" #CD74, HLA-DRA; B-cell genes in ~5% of cells
+AuCell_labels["10"] <- "Inflammatory (NF-kB)"         #CXCL10/11, CCL2, CXCL2, SELE, HSPA6
+AuCell_labels["11"] <- "Mitotic (G2/M)"               #PLK1, CDC20, KIF20A, MKI67, TOP2A
+AuCell_labels
 
-data$cell_state_cca <- unname(cca_labels[as.character(data$clusters_cca)])
+data$cell_state_cca <- unname(AuCell_labels[as.character(data$clusters_cca)])
 table(data$clusters_cca, data$cell_state_cca)
 
 ##3. Labelled UMAP (one final CCA UMAP, with the setting you chose from the grid)
@@ -505,14 +504,42 @@ auc_mat <- t(getAUC(cells_AUC))
 colnames(auc_mat) <- make.names(colnames(auc_mat))
 data <- AddMetaData(data, as.data.frame(auc_mat))
 
-coloured_umap <- FeaturePlot(data, features = "Tsoi.Melanocytic", reduction = "umap.cca")   # UMAP coloreado por AUC
-ggsave("Module1 (Exploratory Analysis)/results/Annotation/coloured_umap_AUC.png", plot =coloured_umap, width = 10, height = 5, dpi = 300)
-
-
 mean_auc <- aggregate(as.data.frame(auc_mat), list(cluster = data$clusters_cca), mean)
 rownames(mean_auc) <- mean_auc$cluster
-heatmap <- pheatmap::pheatmap(scale(as.matrix(mean_auc[, -1])))   # clusters × firmas
+heatmap <- pheatmap::pheatmap(scale(as.matrix(mean_auc[, -1])))   # clusters × signatures
 ggsave("Module1 (Exploratory Analysis)/results/Annotation/heatmap_signs_clus.png", plot = heatmap, width = 10, height = 5, dpi = 300)
+
+#UMAP after AUCell
+## One name per cluster. Fill these in after looking at the dot plot and the marker table;
+##clusters you are not sure about stay "Unassigned". Two clusters may share the same name.
+AuCell_labels <- setNames(rep("Unassigned", nlevels(data$clusters_cca)), levels(data$clusters_cca))
+AuCell_labels["0"]  <- "Unassigned"            #SOX10 high; NCMAP, SCN7A, SCRG1, ANGPTL7
+AuCell_labels["1"]  <- "Melanocytic"                  #PMEL, MLANA, MITF, DCT, TYR
+AuCell_labels["2"]  <- "Stress (ATF4 / amino acid)"   #ASNS, TRIB3, GDF15, CDKN1A (weak markers)
+AuCell_labels["3"]  <- "Immune/Antigen-presenting"                 #GBP1/4, IFIT2, IFI44L, STAT1, B2M, HLA-A
+AuCell_labels["4"]  <- "Neural-crest-like/Undifferenciated"  #MMP1, MMP3, IL11, SERPINB2, SERPINE1, INHBA
+AuCell_labels["5"]  <- "Stress (hypoxia)"             #NDUFA4L2, VEGFA, CA9, MT3
+AuCell_labels["6"]  <- "Stressed/MSC-like"   #TYR, MITF, DCT high; low MHC-I
+AuCell_labels["7"]  <- "Unassigned"  #FN1, TAGLN, CCN1, CCN2, DKK1
+AuCell_labels["8"]  <- "Mitosis"               #E2F2, RRM2, MCM10, CDC45, CLSPN
+AuCell_labels["9"]  <- "Undifferenciated" #CD74, HLA-DRA; B-cell genes in ~5% of cells
+AuCell_labels["10"] <- "IFN-responsive/invasive"         #CXCL10/11, CCL2, CXCL2, SELE, HSPA6
+AuCell_labels["11"] <- "Proliferating"               #PLK1, CDC20, KIF20A, MKI67, TOP2A
+AuCell_labels
+
+data$AUCell_states <- unname(AuCell_labels[as.character(data$clusters_cca)])
+table(data$clusters_cca, data$cell_state_cca)
+
+##3. Labelled UMAP (one final CCA UMAP, with the setting you chose from the grid)
+data <- RunUMAP(data, reduction = "integrated.cca", dims = 1:15, reduction.name = "umap.cca",
+                n.neighbors = 30L, min.dist = 0.3)
+umap_states <- DimPlot(data, reduction = "umap.cca", group.by = "cell_state_cca",
+                       label = TRUE, repel = TRUE, pt.size = 0.5) + NoLegend() +
+  ggtitle("CCA clusters - cell states")
+umap_states
+ggsave(file.path(annot_dir, "s1_UMAP_cell_states_cca_AUCell.png"), umap_states, width = 8, height = 6, dpi = 300)
+
+
 
 #Save session information
 Info_script <-sessionInfo()
