@@ -136,15 +136,20 @@ pca2<-DimPlot(data, reduction = "pca")
 pca2
 ggsave(filename="Module1 (Exploratory Analysis)/results/PCA/PCA.png", plot=pca2,width = 8, height = 6, dpi = 300)
 
+
+
 DimHeatmap(data, dims = 1, cells = 500, balanced = TRUE)
 
+
+
+#Elbow plot to see the influence of the number of dimensions in the reduction of standar deviation.
 elbow_plot<-ElbowPlot(data)
 elbow_plot
-
 ggsave(filename="Module1 (Exploratory Analysis)/results/PCA/Elbow_plot.png", plot=elbow_plot,width = 8, height = 6, dpi = 300)
 
+
 #Integration
-#We integrate the same object with two different methods so we can compare them afterwards.
+#We integrate the same object with two different methods (Harmony and CCA) so we can compare them afterwards.
 #Both start from the same SCT-normalised, per-patient layers and the same PCA, so any
 #difference between the results comes from the integration method itself.
 
@@ -168,10 +173,11 @@ plot_umap_run <- function(df, axis_prefix) {
   pt_size <- min(1583 / nrow(df), 1)
   x_lab <- paste0(axis_prefix, "1")
   y_lab <- paste0(axis_prefix, "2")
-  params_text <- df$params[1]
   
+  #Where to put the tag of each cluster. Takes the median of the XY coordinates of all it's cells.
   centers <- aggregate(cbind(UMAP_1, UMAP_2) ~ cluster, data = df, FUN = median)
   
+  #Umap per clusters
   plot_clusters <- ggplot(df, aes(UMAP_1, UMAP_2, colour = cluster)) +
     geom_point(size = pt_size, shape = 16) +
     geom_text(data = centers, aes(label = cluster), colour = "black", size = 4) +
@@ -179,14 +185,16 @@ plot_umap_run <- function(df, axis_prefix) {
     theme_classic() +
     NoLegend() 
   
+  #Umap per patients (to see if they are equally distributed)
   set.seed(42)
-  df_shuffled <- df[sample(nrow(df)), ]
+  df_shuffled <- df[sample(nrow(df)), ] #This is done so the points are painted on a random order and a patient does not overlap another
   plot_patients <- ggplot(df_shuffled, aes(UMAP_1, UMAP_2, colour = patient_id)) +
     geom_point(size = pt_size, shape = 16) +
     labs(x = x_lab, y = y_lab, colour = "patient_id") +
     guides(colour = guide_legend(override.aes = list(size = 3))) +
     theme_classic() 
   
+  #Combine both panels in one figure
   patchwork::wrap_plots(plot_clusters, plot_patients) +
     patchwork::plot_annotation(title = df$params[1],
                                theme = theme(plot.title = element_text(size = 11)))
@@ -195,9 +203,9 @@ plot_umap_run <- function(df, axis_prefix) {
 ##Overview of a whole grid in ONE ggplot, faceted by the parameters (built from the table,
 ##so it cannot pick up a stale grid or plot_list). colour_by = "cluster" or "patient_id".
 plot_grid_overview <- function(results, facet_formula, colour_by, title) {
-  facet_vars <- all.vars(facet_formula)
+  facet_vars <- all.vars(facet_formula) #Return a character vector containing all the names which occur in an expression or call.
   if (colour_by == "patient_id") {
-    set.seed(1)
+    set.seed(42)
     results <- results[sample(nrow(results)), ]
   }
   p <- ggplot(results, aes(UMAP_1, UMAP_2, colour = .data[[colour_by]])) +
@@ -236,18 +244,22 @@ harmony_integration <-function(data,theta,lambda,max_iter,sigma){
       sigma = sigma
       
     )
-   
+    ## Compute the k nearest neighbors for the data. The dimensions were chose based on the elbow plot.
     data <- FindNeighbors(data, reduction = "harmony", dims = 1:15,
                           graph.name = c("harmony_nn", "harmony_snn"))
+    
+    #Identification of clusters of cells by a shared nearest neighbor (SNN) modularity optimization based clustering algorithm.
     data <- FindClusters(data, graph.name = "harmony_snn", resolution = 0.5,
                          cluster.name = "clusters_harmony")
     
+    #Runs the Uniform Manifold Approximated and Projection (UMAP) dimensional reduction technique
     data <- RunUMAP(data, reduction = "harmony", dims = 1:15, reduction.name = "umap.harmony")
     
     #A text to write down the parameters values
     params_text <- paste0("theta = ",theta, " | lambda = ", lambda, " | max.iter.harmony =", max_iter, " | sigma = ", sigma)
     
-    #Return only the light table: one row per cell
+    #Return only the light table: one row per cell. 
+    #This was done because otherwise it used too much memory.
     umap <- Embeddings(data, reduction = "umap.harmony")
     data.frame(cell       = rownames(umap),
                UMAP_1     = umap[, 1],
@@ -259,9 +271,12 @@ harmony_integration <-function(data,theta,lambda,max_iter,sigma){
                row.names  = NULL)
  }
      
+#Test done to see if the function was working
 
 #test_df <- harmony_integration(data, theta = 2, lambda = 1, max_iter = 10, sigma = 0.1)
 #plot_umap_run(test_df, "umapharmony_")
+
+
 
 #Each section has its own grid variable (harmony_grid / cca_grid), so running one section
 #on its own can never pick up the other section's parameters.
@@ -309,24 +324,26 @@ gc()
 ##CCA (Seurat anchors: cell-level mutual nearest neighbours in a shared CCA space)
 ##This is the method used in the original tumour analysis (Tumor_Analysis_Code.R).
 ##It is slower and uses more memory than Harmony, so it is done only ONCE here.
+
 data <- IntegrateLayers(object = data, method = CCAIntegration,
                         orig.reduction = "pca", new.reduction = "integrated.cca",
                         normalization.method = "SCT", verbose = FALSE)
 
 data <- FindNeighbors(data, reduction = "integrated.cca", dims = 1:15,
                       graph.name = c("cca_nn", "cca_snn"))
+
 data <- FindClusters(data, graph.name = "cca_snn", resolution = 0.5,
                      cluster.name = "clusters_cca")
 
 
-
+#Save the data so it is not necessary to re-run the previous code
 qs_save(data, "Module1 (Exploratory Analysis)/intermediate/s1_data_cca.qs2")
 
+
+#Build the function of integration with CCA
 cca_integration <-function(data, n_neighbors, minimum_distance){
   set.seed(42)
   data <- RunUMAP(data, reduction = "integrated.cca", dims = 1:15, reduction.name = "umap.ccaintegration", n.neighbors =n_neighbors, min.dist = minimum_distance)
- 
-
    
   #A text to write down the parameters values
   params_text <- paste0("minumum_distance = ",minimum_distance, " | num_neighbors = ", n_neighbors)
@@ -339,7 +356,8 @@ cca_integration <-function(data, n_neighbors, minimum_distance){
              cluster    = data$clusters_cca,
              patient_id = data$patient_id,
              params     = params_text,
-             n_neighbors = n_neighbors, minimum_distance = minimum_distance,
+             n_neighbors = n_neighbors, 
+             minimum_distance = minimum_distance,
              row.names  = NULL)
 }
 
@@ -348,7 +366,7 @@ cca_integration <-function(data, n_neighbors, minimum_distance){
 # test_plot <- cca_integration(data, n_neighbors = 30L, minimum_distance = 0.3 )
 # test_plot
 
-
+#Build the grid to combine the different number of neighbors and minumum distance in just one plot.
 cca_grid <- expand.grid(n_neighbors = c(10L,20L,30L,40L,50L), minimum_distance =c(0.1,0.2,0.3,0.4,0.5))
 cca_grid   # print it: 25 rows = 25 runs
 cca_results <- vector("list", nrow(cca_grid))
@@ -387,15 +405,45 @@ ggsave(filename = "Module1 (Exploratory Analysis)/results/CCA/cca_grid_patients.
 rm(cca_grid_clusters, cca_grid_patients)
 gc()
 
+
+
+#Graphic to see the composition per patient in each cluster
+comp <- data@meta.data %>%
+  count(cluster = as.character(clusters_cca), patient = patient_id) %>%
+  bind_rows(data@meta.data %>% count(patient = patient_id) %>% mutate(cluster = "All")) %>%
+  group_by(cluster) %>%
+  mutate(prop = n / sum(n), total = sum(n)) %>%
+  ungroup() %>%
+  mutate(cluster = factor(cluster, levels = c("All", levels(data$clusters_cca))))
+
+
+p_comp <- ggplot(comp, aes(x = cluster, y = prop, fill = patient)) +
+  geom_col(width = 0.8) +
+  geom_text(data = distinct(comp, cluster, total),
+            aes(x = cluster, y = 1.01, label = total),
+            inherit.aes = FALSE, size = 3, vjust = 0) +          # nº de células encima de cada barra
+  scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, 0.06))) +
+  labs(x = "CCA cluster", y = "Cells (%)", fill = "Patient",
+       title = "Patient contribution to each CCA cluster") +
+  theme_classic()
+
+
+p_comp
+ggsave("Module1 (Exploratory Analysis)/results/Annotation/composition_cluster_per_patient.png", plot = p_comp,width = 19, height = 17.5, dpi = 150 )
+
 #FindAllMarkers
 ##SCTransform was run per patient, so the SCT assay holds one model per patient.
 ##FindMarkers refuses that until PrepSCTFindMarkers() puts all cells on the same scale.
-##FindAllMarkers catches that error for every cluster (it only shows up in warnings()) and
-##returns an EMPTY table without a "cluster" column, which is what made group_by(cluster) fail.
-data <- PrepSCTFindMarkers(data, assay = "SCT")
+
+
+data <- PrepSCTFindMarkers(data, assay = "SCT") #Given a merged object with multiple SCT models (in this case data)
+                                                #this function uses minumum of the median UMI (calculated using the raw UMI counts) of 
+                                                #individual objects to reverse the individual SCT regression model using minumum
+                                                #of median UMI as the sequencing depth covariate.
 Idents(data) <- "clusters_cca"
 data.markers <- FindAllMarkers(data, assay = "SCT", only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.2)
 stopifnot(nrow(data.markers) > 0)   # if this stops, run warnings() to see why each cluster failed
+
 data.markers %>%
   group_by(cluster) %>%
   slice_max(avg_log2FC, n = 10)
@@ -530,18 +578,18 @@ ggsave("Module1 (Exploratory Analysis)/results/Annotation/heatmap_signs_clus.png
 ## One name per cluster. Fill these in after looking at the dot plot and the marker table;
 ##clusters you are not sure about stay "Unassigned". Two clusters may share the same name.
 AuCell_labels <- setNames(rep("Unassigned", nlevels(data$clusters_cca)), levels(data$clusters_cca))
-AuCell_labels["0"]  <- "Unassigned"            #SOX10 high; NCMAP, SCN7A, SCRG1, ANGPTL7
-AuCell_labels["1"]  <- "Melanocytic"                  #PMEL, MLANA, MITF, DCT, TYR
-AuCell_labels["2"]  <- "Stress (ATF4 / amino acid)"   #ASNS, TRIB3, GDF15, CDKN1A (weak markers)
-AuCell_labels["3"]  <- "Immune/Antigen-presenting"                 #GBP1/4, IFIT2, IFI44L, STAT1, B2M, HLA-A
-AuCell_labels["4"]  <- "Neural-crest-like/Undifferenciated"  #MMP1, MMP3, IL11, SERPINB2, SERPINE1, INHBA
-AuCell_labels["5"]  <- "Stress (hypoxia)"             #NDUFA4L2, VEGFA, CA9, MT3
-AuCell_labels["6"]  <- "Stressed/MSC-like"   #TYR, MITF, DCT high; low MHC-I
-AuCell_labels["7"]  <- "Unassigned"  #FN1, TAGLN, CCN1, CCN2, DKK1
-AuCell_labels["8"]  <- "Mitosis"               #E2F2, RRM2, MCM10, CDC45, CLSPN
-AuCell_labels["9"]  <- "Undifferenciated" #CD74, HLA-DRA; B-cell genes in ~5% of cells
-AuCell_labels["10"] <- "IFN-responsive/invasive"         #CXCL10/11, CCL2, CXCL2, SELE, HSPA6
-AuCell_labels["11"] <- "Proliferating"               #PLK1, CDC20, KIF20A, MKI67, TOP2A
+AuCell_labels["0"]  <- "Unassigned_1"            
+AuCell_labels["1"]  <- "Melanocytic"                  
+AuCell_labels["2"]  <- "Stress (ATF4 / amino acid)"   
+AuCell_labels["3"]  <- "Immune/Antigen-presenting"                 
+AuCell_labels["4"]  <- "Neural-crest-like/Undifferenciated"  
+AuCell_labels["5"]  <- "Stress (hypoxia)"             
+AuCell_labels["6"]  <- "Stressed/MSC-like"   
+AuCell_labels["7"]  <- "Unassigned_2"  
+AuCell_labels["8"]  <- "Mitosis"               
+AuCell_labels["9"]  <- "Patient specific" 
+AuCell_labels["10"] <- "IFN-responsive/invasive"         
+AuCell_labels["11"] <- "Proliferating"               
 AuCell_labels
 
 data$AUCell_states <- unname(AuCell_labels[as.character(data$clusters_cca)])
@@ -550,11 +598,16 @@ table(data$clusters_cca, data$cell_state_cca)
 ##3. Labelled UMAP (one final CCA UMAP, with the setting you chose from the grid)
 data <- RunUMAP(data, reduction = "integrated.cca", dims = 1:15, reduction.name = "umap.cca",
                 n.neighbors = 30L, min.dist = 0.3)
-umap_states <- DimPlot(data, reduction = "umap.cca", group.by = "AUCell_states",
+umap_states <- DimPlot(data, reduction = "umap.cca", group.by = "clusters_cca",
                        label = TRUE, repel = TRUE, pt.size = 0.5) + NoLegend() +
   ggtitle("AuCell - cell states")
 umap_states
 ggsave(file.path(annot_dir, "s1_UMAP_cell_states_cca_AUCell.png"), umap_states, width = 8, height = 6, dpi = 300)
+
+
+#See if the how the clusters are organized in melanocityc/immunitary
+melanocityc <- Tumor_signatures %>% filter(grepl("Melanocytic", Cell_state, ignore.case = TRUE))
+
 
 
 
