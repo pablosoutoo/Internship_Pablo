@@ -606,10 +606,44 @@ ggsave(file.path(annot_dir, "s1_UMAP_cell_states_cca_AUCell.png"), umap_states, 
 
 
 #See if the how the clusters are organized in melanocityc/immunitary
-melanocityc <- Tumor_signatures %>% filter(grepl("Melanocytic", Cell_state, ignore.case = TRUE))
 
+z <- scale(as.matrix(mean_auc[, -1]))   # clusters x signatures, z across clusters
+states <- list(
+  Melanocytic = c("Wouters.Melanocytic.cell.state", "Tsoi.Melanocytic",
+                  "Rambow.MITFtargets", "Rambow.pigmentation"),
+  Immune      = c("Karras.Antigen_presentation", "Rambow.Immune"))
+sigs <- unlist(states)
+row_state <- rep(names(states), lengths(states))
 
+ComplexHeatmap::Heatmap(t(z[, sigs]), name = "z (mean AUC)",
+                        row_split = factor(row_state, levels = names(states)),
+                        cluster_rows = FALSE, cluster_row_slices = FALSE,
+                        col = circlize::colorRamp2(c(-2, 0, 2), c("#2166AC", "white", "#B2182B")))
 
+state_score <- sapply(states, function(s) rowMeans(z[, s, drop = FALSE]))  # summary per cluster
+
+#Most enriched signature per cluster
+top1 <- data.frame(cluster   = rownames(z),
+                   signature = colnames(z)[apply(z, 1, which.max)],
+                   z         = round(apply(z, 1, max), 2))
+top1
+
+#Create a boxplot to see the distrubution of the signatures in each cluster
+for (s in unique(top1$signature)) {
+  top_clusters <- top1$cluster[top1$signature == s]          # cluster(s) where s is the most enriched
+  df <- data.frame(auc     = auc_mat[colnames(data), s],     # same cell order as data
+                   cluster = data$clusters_cca,
+                   patient = data$patient_id)
+  
+  p <- ggplot(df, aes(cluster, auc, fill = patient)) +
+    geom_boxplot(outlier.size = 0.3) +
+    theme_bw() +
+    labs(y = paste("AUC:", s), x = "Cluster",
+         title = s, subtitle = paste("Top signature of cluster(s):", paste(top_clusters, collapse = ", ")))
+  
+  print(p)                                                    # para verlo en RStudio
+  ggsave(file.path("Module1 (Exploratory Analysis)/results/Annotation/boxplots.png", paste0("box_", s, ".png")), p, width = 10, height = 4.5, dpi = 300)
+}
 
 #Save session information
 Info_script <-sessionInfo()
