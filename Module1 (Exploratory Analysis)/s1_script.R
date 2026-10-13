@@ -645,7 +645,11 @@ for (s in unique(top1$signature)) {
   ggsave(file.path("Module1 (Exploratory Analysis)/results/Annotation/boxplots.png", paste0("box_", s, ".png")), p, width = 10, height = 4.5, dpi = 300)
 }
 
-#Save session information
+
+#Save data
+qs_save(data, "Module1 (Exploratory Analysis)/intermediate/data_clusterized.qs2")
+
+ #Save session information
 Info_script <-sessionInfo()
 
 #Save environment
