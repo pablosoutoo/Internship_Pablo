@@ -111,14 +111,15 @@ data<- SCTransform(data)
 
 
 #Drop some genes that we are not interested in
-drop <- c(grep("^(MT-|                      #Mitocondrial genes
-               RP[SL]\\d|                   #Ribosomal proteins
-               TR[ABDG][VJC]|               #V,J and C segmenst of the TCR (clonotipe specific and they would split the cells by clone)
-               IG[HKL][VJC])",              #V,J and C segments of immunoglobulines
-               rownames(data), value = TRUE),
-          "HTN1", "HTN3", "STATH", t_id, cyto,
-          "PTPRC", "IL32", "CD52", "CORO1A", "CCL4", "CD7", "LAG3", "CD69")
-
+drop_pattern <- paste0("^(",
+                        "MT-",                  #Mitocondrial genes
+                        "|RP[SL]\\d",           #Ribosomal proteins
+                        "|TR[ABDG][VJC]",       #V,J and C segmenst of the TCR (clonotipe specific and they would split the cells by clone)
+                        "|IG[HKL][VJC]",        #V,J and C segments of immunoglobulines
+                        ")")
+drop <- c(grep(drop_pattern, rownames(data), value = TRUE),
+           "HTN1", "HTN3", "STATH", t_id, cyto,
+           "PTPRC", "IL32", "CD52", "CORO1A", "CCL4", "CD7", "LAG3", "CD69")
 
 VariableFeatures(data) <- setdiff(VariableFeatures(data), drop)
 
