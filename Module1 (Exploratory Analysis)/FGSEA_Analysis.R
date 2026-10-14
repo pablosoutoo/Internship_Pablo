@@ -6,10 +6,97 @@ library(data.table)
 library(ggplot2)
 library(msigdbr)
 library(qs2)
-library(AUCell)
+library(dplyr)
+library(Seurat)
+library(MAST)
+
+#Paths and settings
+in_obj           <- "Module1 (Exploratory Analysis)/intermediate/data_clusterized.qs2"
+fgsea_dir        <- "Module1 (Exploratory Analysis)/results/FGSEA"
+intermediate_dir <- "Module1 (Exploratory Analysis)/intermediate"
+dir.create(fgsea_dir, showWarnings = FALSE, recursive = TRUE)
+
+target_cluster   <- "2"
+de_test          <- "MAST"      #"as in the lab's script
+run_all_clusters <- FALSE      #TRUE = repeat the analysis for every cluster and draw an NES heatmap to compare them
+padj_cutoff      <- 0.05
+
 
 #Data
 ##Downlaad all the C2:CP collection for Human (Homo Sapiens)
 c2_cp_human <- msigdbr(species = "Homo sapiens", category = "C2", subcategory = "CP")
-data<-qs_read("Module1 (Exploratory Analysis)/intermediate/data_clusterized.qs2")
+data <- qs_read(in_obj)
+
+#Named list for fgsea
+pathways <- lapply(split(c2_cp_human$gene_symbol, c2_cp_human$gs_name), unique)
+
+
+#Functions
+#1 DE of one cluster vs all the other clusters
+de_vs_rest <- function(cluster_id) {
+  de <- FindMarkers(data, ident.1 = cluster_id, ident.2 = NULL, assay = "SCT",
+                    test.use = de_test, latent.vars = "patient_id",
+                    logfc.threshold = 0, min.pct = 0.05, only.pos = FALSE)
+  de$gene <- rownames(de)
+  de
+}
+
+#2. Ranked list 
+make_ranking <- function(de) {
+  p <-de$p_val
+  stats<-sign(de$avg_log2FC) * -log10(p)
+  names(stats) <- de$gene
+  stats <- stats[is.finite(stats)]
+  sort(stats, decreasing = TRUE)
+}
+  
+#3.FGSEA
+run_fgsea <- function(stats, cluster_id) {
+  set.seed(42)
+  res <- fgsea(pathways = pathways, stats = stats, minSize = 15, maxSize = 500)
+  res <- as.data.frame(res)
+  res <- res[!is.na(res$padj), ]
+  res$cluster <- cluster_id
+  ord <- order(res$padj, -abs(res$NES))
+  res <- res[ord, ]
+  rownames(res) <- NULL
+  res
+}
+
+#4. Barplot with the top up- and down-regulated pathway
+plot_top_nes <- function(res, cluster_id, n = 10, subtitle = paste0("* padj < ", padj_cutoff)) {
+  df  <- as.data.frame(res)[, c("pathway", "NES", "padj")]
+  pool <- if (any(df$padj < padj_cutoff)) df[df$padj < padj_cutoff, ] else df
+  top <- bind_rows(pool %>% filter(NES > 0) %>% slice_max(NES, n = n, with_ties = FALSE),
+                   pool %>% filter(NES < 0) %>% slice_min(NES, n = n, with_ties = FALSE))
+  top$label <- gsub("_", " ", top$pathway)
+  ggplot(top, aes(NES, reorder(label, NES), fill = NES)) +
+    geom_col() +
+    geom_point(data = top[top$padj < padj_cutoff, ], shape = 8, size = 1.5, show.legend = FALSE) +
+    scale_fill_gradient2(low = "#7cd3f7", mid = "white", high = "#825d9e") +
+    scale_y_discrete(labels = scales::label_wrap(45)) +
+    labs(x = "NES", y = NULL, title = paste("Cluster", cluster_id, "vs rest - MSigDB C2:CP"), subtitle = subtitle) +
+    theme_bw() +
+    theme(axis.text.y = element_text(size = 6), panel.grid = element_blank())
+}
+
+
+#ANALYSIS OF CL
+##1. DE and ranking
+de_target    <- de_vs_rest(target_cluster)
+stats_target <- make_ranking(de_target)
+head(stats_target, 20)   #most up-regulated in cluster 2
+tail(stats_target, 20)   #most down-regulated in cluster 2USTER 2
+
+##2 FGSEA
+fgsea_target <- run_fgsea(stats_target, target_cluster)
+
+
+
+
+#Save session information
+Info_script <-sessionInfo()
+
+#Save environment
+save.image("Module1 (Exploratory Analysis)/intermediate/environment_fgsea.rdata")
 
