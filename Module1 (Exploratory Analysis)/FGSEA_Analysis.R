@@ -91,7 +91,29 @@ tail(stats_target, 20)   #most down-regulated in cluster 2USTER 2
 ##2 FGSEA
 fgsea_target <- run_fgsea(stats_target, target_cluster)
 
+##3 Leading edge
+top_up <- head(fgsea_target[fgsea_target$NES > 0 & fgsea_target$padj < padj_cutoff, ], 10)
+data.frame(pathway = top_up$pathway,
+           NES     = round(top_up$NES, 2),
+           leading_edge = sapply(top_up$leadingEdge, function(g) paste(head(g, 15), collapse = ", ")))
 
+#Plots
+##Top up /down pathways
+p_top <- plot_top_nes(fgsea_target, target_cluster)
+p_top
+
+
+#Enrichment plots
+top3 <- head(fgsea_target$pathway[fgsea_target$NES > 0 & fgsea_target$main_pathway], 3)
+for (pw in top3) {
+  res_pw <- fgsea_target[fgsea_target$pathway == pw, ]
+  p_enr <- plotEnrichment(pathways[[pw]], stats_target) +
+    labs(title = gsub("_", " ", pw),
+         subtitle = paste0("Cluster ", target_cluster, " | NES = ", round(res_pw$NES, 2),
+                           " | padj = ", signif(res_pw$padj, 2)))
+  print(p_enr)
+  ggsave(file.path(fgsea_dir, paste0("enrichment_cluster", target_cluster, "_", pw, ".png")), p_enr, width = 7, height = 4, dpi = 300)
+}
 
 
 #Save session information
