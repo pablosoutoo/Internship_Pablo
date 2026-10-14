@@ -18,7 +18,7 @@ dir.create(fgsea_dir, showWarnings = FALSE, recursive = TRUE)
 
 target_cluster   <- "2"
 de_test          <- "MAST"      #as in the lab's script
-run_all_clusters <- FALSE      #TRUE = repeat the analysis for every cluster and draw an NES heatmap to compare them
+run_all_clusters <- TRUE      #TRUE = repeat the analysis for every cluster and draw an NES heatmap to compare them
 padj_cutoff      <- 0.05
 
 
