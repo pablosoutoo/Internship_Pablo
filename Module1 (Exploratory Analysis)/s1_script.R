@@ -33,8 +33,12 @@ plot2
 ggsave(filename="Module1 (Exploratory Analysis)/results/s1_feat_scatt_1.png", plot=plot1,width = 8, height = 6, dpi = 300)
 ggsave(filename="Module1 (Exploratory Analysis)/results/s1_feat_scatt_2.png", plot=plot2,width = 8, height = 6, dpi = 300)
 
-#We filter the data in order to discard cells with a low gene expression and a high percentage of mithocondrial genes.
-#We'll keep the cells with at leats 500 genes detected and maximal 7500(nFeatureRNA), and below a 15% percentage of mithocondrial genes (already in the paper). 
+#Cell filtering (2026-10-15): same procedure as the lab (Tumor_Analysis_Code.R)
+##The object was already filtered by the lab with the thresholds of the paper (200 < nFeature < 8000,
+##percent.mito < 15), so the old extra filter (500-7500 genes) only removed 1,269 cells with >7500 genes.
+##Here we only keep the samples the lab used for tumour cells (SG_Singlets and DB_Tumor_Tcell).
+##Low-quality and non-tumour cells are removed later at the CLUSTER level, as the lab did
+##("Low Gene Count Cells" cluster and clusters of non-tumour cells), see "Cluster-level QC" below.
 
 # NOTE (2026-09-23): subset() is unreliable on this object. It trims meta.data
 # correctly (37,407 QC-passing cells) but leaves the RNA assay's counts matrix at
@@ -59,8 +63,8 @@ class(data[["RNA"]])
 packageVersion("Seurat")
 packageVersion("SeuratObject")
 
-##QC-passing barcodes, taken from meta.data
-qc_pass <- with(data@meta.data, nFeature_RNA > 500 & nFeature_RNA < 7500 & percent.mt < 15)
+##Barcodes of the samples used for tumour cells, taken from meta.data
+qc_pass <- with(data@meta.data, sample_id %in% c("SG_Singlets", "DB_Tumor_Tcell"))
 keep_cells <- rownames(data@meta.data)[qc_pass]
 length(keep_cells)
 
@@ -83,7 +87,7 @@ data <- CreateSeuratObject(counts = counts_filtered, meta.data = meta_filtered,
 rm(counts, counts_filtered, meta_filtered)
 
 
-##Sanity check: all three must agree (28,126 genes x 44,478 cells)
+##Sanity check: all three must agree (28,126 genes x 45,024 cells)
 ncol(data)
 nrow(data@meta.data)
 dim(data[["RNA"]])
@@ -100,14 +104,21 @@ t_id  <- c("CD3D", "CD3E", "CD2", "CD8A")
 cyto  <- c("NKG7", "GZMB", "GZMA", "CCL5", "PRF1", "CST7")
 data$T_doublet <- colSums(cnt[t_id, ] > 0) >= 2 & colSums(cnt[cyto, ] > 0) >= 2
 table(data$T_doublet, data$sample_id)
+##These cells are NOT removed any more (2026-10-15): a DB_Tumor_Tcell droplet is, by design, a tumour cell
+##sorted together with a T cell, so removing cells with T-cell transcripts removed mainly DB cells
+##(e.g. 28% of P5 DB vs 1% of P5 SG) and biases the DB vs SG comparison. The T-cell genes are excluded
+##from the variable features below, so they do not drive the clustering. T_doublet is kept as a column
+##for a sensitivity analysis (repeat the DB vs SG results without these cells).
+data$PTPRC_pos <- cnt["PTPRC", ] > 0                          #used in the cluster-level QC
+data <- PercentageFeatureSet(data, pattern = "^RP[SL]\\d", col.name = "percent.ribo")
 rm(cnt)
-data <- subset(data, subset = T_doublet == FALSE)   # works: object already built
 data[["RNA"]] <- split(data[["RNA"]], f = data$patient_id)
 stopifnot(length(unique(data$patient_id)) > 1)
 
 #Normalization of the data with SCTransform()
 data <- PercentageFeatureSet(data, pattern = "^MT-", col.name = 'percent.mt')
-data<- SCTransform(data)
+##percent.mt and nFeature_RNA are regressed out, as in Tumor_Analysis_Code.R
+data <- SCTransform(data, vars.to.regress = c("percent.mt", "nFeature_RNA"))
 
 
 #Drop some genes that we are not interested in
@@ -326,15 +337,61 @@ gc()
 ##This is the method used in the original tumour analysis (Tumor_Analysis_Code.R).
 ##It is slower and uses more memory than Harmony, so it is done only ONCE here.
 
-data <- IntegrateLayers(object = data, method = CCAIntegration,
-                        orig.reduction = "pca", new.reduction = "integrated.cca",
-                        normalization.method = "SCT", verbose = FALSE)
+##NOTE: the Harmony grid above is run on the data BEFORE the cluster-level QC. Re-run that section on the
+##final object if you want the Harmony vs CCA comparison on the clean cells.
+run_cca <- function(data) {
+  data <- IntegrateLayers(object = data, method = CCAIntegration,
+                          orig.reduction = "pca", new.reduction = "integrated.cca",
+                          normalization.method = "SCT", verbose = FALSE)
+  data <- FindNeighbors(data, reduction = "integrated.cca", dims = 1:15,
+                        graph.name = c("cca_nn", "cca_snn"))
+  data <- FindClusters(data, graph.name = "cca_snn", resolution = 0.5,
+                       cluster.name = "clusters_cca")
+  data
+}
+data <- run_cca(data)
 
-data <- FindNeighbors(data, reduction = "integrated.cca", dims = 1:15,
-                      graph.name = c("cca_nn", "cca_snn"))
 
-data <- FindClusters(data, graph.name = "cca_snn", resolution = 0.5,
-                     cluster.name = "clusters_cca")
+#Cluster-level QC (same idea as Tumor_Analysis_Code.R)
+##The lab removed the clusters of non-tumour cells and the "Low Gene Count Cells" cluster, and re-processed
+##the remaining cells. A cluster is removed when, compared with the whole dataset, it has:
+## - clearly fewer genes (< 60% of the median; low-quality cells),
+## - half the ribosomal fraction or less (damaged cells that lost their cytoplasmic RNA), or
+## - >20% PTPRC+ cells without T-cell signal (immune cells, not tumour cells).
+##In the previous clustering these were cluster 9 (immune, 2,304 genes vs 4,586) and cluster 6
+##(damaged, 3.9% ribosomal vs 14.1%). CHECK THE TABLE before accepting the removal.
+cluster_qc <- data@meta.data %>%
+  group_by(cluster = clusters_cca) %>%
+  summarise(n_cells         = n(),
+            nFeature_median = median(nFeature_RNA),
+            ribo_median     = round(median(percent.ribo), 1),
+            mt_median       = round(median(percent.mt), 1),
+            PTPRC_pct       = round(100 * mean(PTPRC_pos & !T_doublet), 1),
+            DB_pct          = round(100 * mean(sample_id == "DB_Tumor_Tcell"), 1),
+            .groups = "drop") %>%
+  mutate(nFeature_rel = round(nFeature_median / median(data$nFeature_RNA), 2),
+         ribo_rel     = round(ribo_median / median(data$percent.ribo), 2),
+         remove       = nFeature_rel < 0.6 | ribo_rel <= 0.5 | PTPRC_pct > 20)
+print(cluster_qc, width = Inf)
+dir.create("Module1 (Exploratory Analysis)/results/Annotation", showWarnings = FALSE, recursive = TRUE)
+write.csv(cluster_qc, "Module1 (Exploratory Analysis)/results/Annotation/s1_cluster_qc_round1.csv", row.names = FALSE)
+
+clusters_to_remove <- as.character(cluster_qc$cluster[cluster_qc$remove])
+clusters_to_remove
+
+##Remove those clusters and re-process the remaining cells once (SCTransform, PCA, CCA, clustering)
+if (length(clusters_to_remove) > 0) {
+  keep_round2 <- colnames(data)[!as.character(data$clusters_cca) %in% clusters_to_remove]
+  data <- subset(data, cells = keep_round2)
+  DefaultAssay(data) <- "RNA"
+  data[["SCT"]] <- NULL
+  data <- SCTransform(data, vars.to.regress = c("percent.mt", "nFeature_RNA"))
+  VariableFeatures(data) <- setdiff(VariableFeatures(data), drop)
+  data <- RunPCA(data, features = VariableFeatures(object = data))
+  data <- run_cca(data)
+  print(ncol(data))
+  print(table(data$clusters_cca))
+}
 
 
 #Save the data so it is not necessary to re-run the previous code
@@ -507,6 +564,8 @@ ggsave(file.path(annot_dir, "s1_canonical_dotplot_cca.png"), dot_cca, width = 12
 
 ##2. One name per cluster. Fill these in after looking at the dot plot and the marker table;
 ##clusters you are not sure about stay "Unassigned". Two clusters may share the same name.
+##WARNING (2026-10-15): these labels were written for the clusters obtained BEFORE the cluster-level QC.
+##The new clustering has different numbers: re-do the labels after checking the new markers.
 AuCell_labels <- setNames(rep("Unassigned", nlevels(data$clusters_cca)), levels(data$clusters_cca))
 AuCell_labels["0"]  <- "Neural crest-like"            #SOX10 high; NCMAP, SCN7A, SCRG1, ANGPTL7
 AuCell_labels["1"]  <- "Melanocytic"                  #PMEL, MLANA, MITF, DCT, TYR
