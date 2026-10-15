@@ -8,7 +8,6 @@ library(msigdbr)
 library(qs2)
 library(dplyr)
 library(Seurat)
-library(MAST)
 
 #Paths and settings
 in_obj           <- "Module1 (Exploratory Analysis)/intermediate/data_clusterized.qs2"
@@ -17,7 +16,8 @@ intermediate_dir <- "Module1 (Exploratory Analysis)/intermediate"
 dir.create(fgsea_dir, showWarnings = FALSE, recursive = TRUE)
 
 target_cluster   <- "2"
-de_test          <- "MAST"      #as in the lab's script
+de_test          <- "wilcox"    #MAST was too slow/memory hungry for every cluster. "wilcox" uses presto if installed (much faster)
+max_cells        <- Inf         #e.g. 2000 = downsample each group to 2000 cells to make the DE even lighter (Inf = use all cells)
 run_all_clusters <- TRUE      #TRUE = repeat the analysis for every cluster and draw an NES heatmap to compare them
 padj_cutoff      <- 0.05
 
@@ -46,10 +46,13 @@ pathways <- lapply(split(c2_cp_human$gene_symbol, c2_cp_human$gs_name), unique)
 
 #Functions
 #1 DE of one cluster vs all the other clusters
+##wilcox does not accept latent.vars (patient_id), only MAST/LR/negbinom/poisson do, so it is only passed to those tests
 de_vs_rest <- function(cluster_id) {
+  latent <- if (de_test %in% c("MAST", "LR", "negbinom", "poisson")) "patient_id" else NULL
   de <- FindMarkers(data, ident.1 = cluster_id, ident.2 = NULL, assay = "SCT",
-                    test.use = de_test, latent.vars = "patient_id",
-                    logfc.threshold = 0, min.pct = 0.05, only.pos = FALSE)
+                    test.use = de_test, latent.vars = latent,
+                    logfc.threshold = 0, min.pct = 0.05, only.pos = FALSE,
+                    max.cells.per.ident = max_cells, random.seed = 42)
   de$gene <- rownames(de)
   de
 }
