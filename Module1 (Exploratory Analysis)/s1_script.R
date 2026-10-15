@@ -467,8 +467,8 @@ gc()
 
 #Graphic to see the composition per patient in each cluster
 comp <- data@meta.data %>%
-  count(cluster = as.character(clusters_cca), patient = patient_id) %>%
-  bind_rows(data@meta.data %>% count(patient = patient_id) %>% mutate(cluster = "All")) %>%
+  dplyr::count(cluster = as.character(clusters_cca), patient = patient_id) %>%
+  bind_rows(data@meta.data %>% dplyr::count(patient = patient_id) %>% mutate(cluster = "All")) %>%
   group_by(cluster) %>%
   mutate(prop = n / sum(n), total = sum(n)) %>%
   ungroup() %>%
