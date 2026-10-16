@@ -8,27 +8,7 @@ library(ggplot2)
 library(sctransform)
 
 #Read Data
-##Nature data
-data_nature<-qs_read("Inputs/External/stripped_s1_harmony_tumor_cells.qs2")
-data
-
-##Austin files
-s6745_s1 <- readRDS("Inputs/External/Patients_Austin/s6745_S1.Rds")
-s6745_s2 <- readRDS("Inputs/External/Patients_Austin/s6745_S2.Rds") 
-s6950_s1 <- readRDS("Inputs/External/Patients_Austin/s6950_S1.Rds")
-
-##Combine the Austin files
-sc_list <- list(s6745_s1 = s6745_s1, s6745_s2 = s6745_s2, s6950_s1 = s6950_s1)
-
-merged <- merge(
-  x = sc_list[[1]],
-  y = sc_list[-1],
-  add.cell.ids = names(sc_list),   # avoid duplicated barcodes
-  project = "NKI"
-)
-
-
-
+data <- readRDS("Inputs/External/combined.rds")
 
 #Standard preprocessing workflow
 
@@ -58,28 +38,10 @@ ggsave(filename="Module1 (Exploratory Analysis)/results/s1_feat_scatt_2.png", pl
 ##Low-quality and non-tumour cells are removed later at the CLUSTER level, as the lab did
 ##("Low Gene Count Cells" cluster and clusters of non-tumour cells), see "Cluster-level QC" below.
 
-# NOTE (2026-09-23): subset() is unreliable on this object. It trims meta.data
-# correctly (37,407 QC-passing cells) but leaves the RNA assay's counts matrix at
-# the original 45,747 cells, so NormalizeData() fails because there is a dimension mismatch.
-# Ruled out: the ADT assay's un-joined per-sample layers (dropping ADT did not fix it),
-# a stale object (re-running subset() fresh did not fix it), and duplicated or
-# mismatched barcodes (zero duplicates, perfect 1:1 match between meta.data and RNA).
-# Most likely a version-specific bug or corrupted internal cell bookkeeping in the
-# Assay5 object (separate from colnames(), which is fine).
-# Workaround: skip subset(). Filter the counts matrix with plain column indexing
-# and rebuild a fresh Seurat object with CreateSeuratObject().
-# ADT is not used downstream, so it is still dropped.
-
-data[["ADT"]] <- NULL
-
 #Confirm that we have only RNA left
 Assays(data)
 data[["RNA"]]
 
-#For the record I'll write down the versions and assay class involved in the subset() bug
-class(data[["RNA"]])
-packageVersion("Seurat")
-packageVersion("SeuratObject")
 
 ##Barcodes of the samples used for tumour cells, taken from meta.data
 qc_pass <- with(data@meta.data, sample_id %in% c("SG_Singlets", "DB_Tumor_Tcell"))
@@ -105,7 +67,7 @@ data <- CreateSeuratObject(counts = counts_filtered, meta.data = meta_filtered,
 rm(counts, counts_filtered, meta_filtered)
 
 
-##Sanity check: all three must agree (28,126 genes x 45,024 cells)
+##Sanity check:
 ncol(data)
 nrow(data@meta.data)
 dim(data[["RNA"]])
@@ -133,9 +95,11 @@ rm(cnt)
 data[["RNA"]] <- split(data[["RNA"]], f = data$patient_id)
 stopifnot(length(unique(data$patient_id)) > 1)
 
-#Normalization of the data with SCTransform()
-data <- PercentageFeatureSet(data, pattern = "^MT-", col.name = 'percent.mt')
 ##percent.mt and nFeature_RNA are regressed out, as in Tumor_Analysis_Code.R
+data <- PercentageFeatureSet(data, pattern = "^MT-", col.name = 'percent.mt')
+
+
+#Normalization of the data with SCTransform()
 data <- SCTransform(data, vars.to.regress = c("percent.mt", "nFeature_RNA"))
 
 
@@ -303,8 +267,8 @@ harmony_integration <-function(data,theta,lambda,max_iter,sigma){
      
 #Test done to see if the function was working
 
-#test_df <- harmony_integration(data, theta = 2, lambda = 1, max_iter = 10, sigma = 0.1)
-#plot_umap_run(test_df, "umapharmony_")
+test_df <- harmony_integration(data, theta = 2, lambda = 1, max_iter = 10, sigma = 0.1)
+plot_umap_run(test_df, "umapharmony_")
 
 
 
