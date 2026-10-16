@@ -8,8 +8,26 @@ library(ggplot2)
 library(sctransform)
 
 #Read Data
-data<-qs_read("Inputs/External/stripped_s1_harmony_tumor_cells.qs2")
+##Nature data
+data_nature<-qs_read("Inputs/External/stripped_s1_harmony_tumor_cells.qs2")
 data
+
+##Austin files
+s6745_s1 <- readRDS("Inputs/External/Patients_Austin/s6745_S1.Rds")
+s6745_s2 <- readRDS("Inputs/External/Patients_Austin/s6745_S2.Rds") 
+s6950_s1 <- readRDS("Inputs/External/Patients_Austin/s6950_S1.Rds")
+
+##Combine the Austin files
+sc_list <- list(s6745_s1 = s6745_s1, s6745_s2 = s6745_s2, s6950_s1 = s6950_s1)
+
+merged <- merge(
+  x = sc_list[[1]],
+  y = sc_list[-1],
+  add.cell.ids = names(sc_list),   # avoid duplicated barcodes
+  project = "NKI"
+)
+
+
 
 
 #Standard preprocessing workflow
